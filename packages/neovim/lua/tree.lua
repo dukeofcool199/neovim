@@ -87,7 +87,7 @@ tree.setup {
 }
 
 which_key.register({
-	["<C-n>"] = { "<cmd>:NvimTreeToggle<cr>", "Toggle Tree" },
+	["<C-f>"] = { "<cmd>:NvimTreeToggle<cr>", "Toggle Tree" },
 }, { mode = "n", silent = true })
 
 which_key.register({
