@@ -143,6 +143,18 @@ lsp.tsserver.setup {
 	},
 }
 
+lsp.volar.setup {
+	cmd = { '@volar@', "--stdio" },
+	init_options = {
+		typescript = {
+			tsdk = '@typescript@/lib'
+		}
+	},
+	filetypes = {
+		"vue",
+	},
+}
+
 -- ESLint
 -- lsp.eslint.setup {
 -- 	on_attach = on_attach,
@@ -283,6 +295,7 @@ prettier.setup {
 		"scss",
 		"typescript",
 		"typescriptreact",
+		"vue",
 		"yaml",
 	},
 	cli_options = {

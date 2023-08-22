@@ -83,6 +83,7 @@ mkLuaConfigs [
       prismaFormat = "${prisma-engines}/bin/prisma-fmt";
       tailwindLanguageServer = "${nodePackages.tailwindcss-language-server}/bin/tailwindcss-language-server";
       astroLanguageServer = "${nodePackages.astrojs-language-server}/bin/astro-ls";
+      volar = "${nodePackages.volar}/bin/vue-language-server";
     };
   }
   ./lualine.lua
