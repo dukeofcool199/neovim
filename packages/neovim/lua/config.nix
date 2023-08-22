@@ -15,11 +15,12 @@ let
   #   MY_ARG = "hello-world";
   # }
   mkLuaConfig = file: args:
-    let module =
-      substituteAll
-        (args // {
-          src = file;
-        });
+    let
+      module =
+        substituteAll
+          (args // {
+            src = file;
+          });
     in
     "luafile ${module}";
 
@@ -86,7 +87,7 @@ mkLuaConfigs [
   }
   ./lualine.lua
   ./neoscroll.lua
-  ./nord.lua
+  ./theme.lua
   ./telescope.lua
   ./tmux-navigator.lua
   ./todo-comments.lua

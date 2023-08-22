@@ -1,4 +1,3 @@
-local colors = require("nord.named_colors")
 local Terminal = require("toggleterm.terminal").Terminal
 
 local is_floating_terminal_mapped = false

@@ -17,13 +17,6 @@ local footer = {
 	""
 }
 
-if fortune_output ~= nil then
-	for line in string.gmatch(fortune_output, "(.-)\n") do
-		table.insert(footer, line)
-	end
-else
-	table.insert(footer, "Go even further beyond ✨")
-end
 
 dashboard.setup {
 	theme = "hyper",
@@ -38,9 +31,7 @@ dashboard.setup {
 		header = {
 			"",
 			"",
-			"┏━┓╻  ╻ ╻┏━┓╻ ╻╻  ╺┳╸┏━┓┏━┓",
-			"┣━┛┃  ┃ ┃┗━┓┃ ┃┃   ┃ ┣┳┛┣━┫",
-			"╹  ┗━╸┗━┛┗━┛┗━┛┗━╸ ╹ ╹┗╸╹ ╹",
+			"JENKVIM",
 			"",
 		},
 		footer = footer,
@@ -72,7 +63,7 @@ dashboard.setup {
 				action = "Telescope find_files",
 			},
 			{
-				icon = " ",
+				icon = " ",
 				desc = "Open Recent",
 				key = "r",
 				group = "Label",

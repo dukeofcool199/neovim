@@ -145,7 +145,7 @@ with vimPlugins; [
   twilight-nvim
 
   # Theme
-  nord-nvim
+  monokai-pro-nvim
 
   # Status Line & Buffer Line
   lualine-nvim

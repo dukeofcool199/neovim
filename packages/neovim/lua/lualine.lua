@@ -1,21 +1,9 @@
-local colors = require("nord.named_colors")
 local theme = require("lualine.themes.nord")
 local navic = require("nvim-navic")
 
 -- Use one single status bar for the whole editor.
 vim.o.laststatus = 3
 
--- Color the mode of the status line.
-theme.visual.a.bg = colors.purple
-theme.visual.a.fg = colors.white
-
--- Color the info area of the status line.
-theme.normal.b.bg = colors.dark_gray
-theme.normal.b.fg = colors.white
-
--- Color the center area of the status line.
-theme.normal.c.bg = colors.black
-theme.inactive.c.bg = colors.black
 
 navic.setup {
 	icons = {
@@ -101,7 +89,6 @@ require("lualine").setup {
 				"location",
 				separator = { left = "", right = "" },
 				left_padding = 2,
-				color = { fg = colors.white, bg = colors.off_blue }
 			},
 			empty,
 		},
@@ -120,7 +107,6 @@ require("lualine").setup {
 				"location",
 				separator = { left = "", right = "" },
 				left_padding = 2,
-				color = { fg = colors.white, bg = colors.off_blue }
 			},
 			empty,
 		},

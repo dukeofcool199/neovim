@@ -1,5 +1,4 @@
 local which_key = require("which-key")
-local colors = require("nord.named_colors")
 
 local signs = { error = " ", warning = " ", hint = " ", info = " " }
 
@@ -8,28 +7,20 @@ local severities = {
 	"warning"
 }
 
-local fill = {
-	bg = colors.black,
-}
 
 local tab_visible = {
-	bg = fill.bg,
 	italic = false,
 }
 
 local tab_selected = {
-	bg = colors.dark_gray,
 	italic = false,
 }
 
 local separator_visible = {
-	fg = fill.bg,
-	bg = fill.bg,
 	italic = false,
 }
 
 local separator_selected = {
-	fg = fill.bg,
 	bg = tab_selected.bg,
 	italic = false,
 }
@@ -67,11 +58,9 @@ local pick_selected = {
 
 local error_visible = {
 	bg = tab_visible.bg,
-	fg = colors.red,
 }
 local error_selected = {
 	bg = tab_selected.bg,
-	fg = colors.red,
 }
 
 local warning_visible = {
@@ -130,7 +119,6 @@ require("bufferline").setup {
 		},
 	},
 	highlights = {
-		fill = fill,
 		background = tab_visible,
 		separator = separator_visible,
 		separator_visible = separator_visible,
