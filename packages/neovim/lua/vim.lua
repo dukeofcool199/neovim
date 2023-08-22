@@ -6,10 +6,15 @@ vim.opt.timeoutlen = 250
 vim.opt.autoindent = true
 vim.opt.cursorline = true
 
+vim.opt.cursorline = true
+
 vim.opt.tabstop = 2
 vim.opt.shiftwidth = 2
 vim.opt.number = true
-vim.opt.relativenumber = true
+
+vim.opt.relativenumber = false
+
+vim.opt.scrolloff = 10
 
 vim.opt.wrap = true
 vim.opt.linebreak = true
