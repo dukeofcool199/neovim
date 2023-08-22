@@ -35,3 +35,6 @@ which_key.register({
 		n = { "<cmd>Telescope manix<cr>", "Nix Documentation" },
 	},
 }, { mode = "n", prefix = "<leader>", silent = true })
+which_key.register({
+	["<C-p>"] = { "<cmd>Telescope find_files<cr>", "Find File" }
+})
