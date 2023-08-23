@@ -88,7 +88,7 @@ with vimPlugins; [
   vim-nix
   nvim-ts-rainbow
   (nvim-treesitter.withPlugins
-    (plugins: tree-sitter.allGrammars))
+    (plugins: tree-sitter.allGrammars ++ [ nvim-treesitter-parsers.vue ]))
   tree-sitter-playground
   nvim-treesitter-context
 
@@ -196,4 +196,8 @@ with vimPlugins; [
 
   # Line Indentation
   indent-blankline-nvim
+
+  #vuejs
+  vim-vue-plugin
+
 ]
