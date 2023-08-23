@@ -1,4 +1,4 @@
-# ✨ Neovim Plus Ultra ✨
+# Jenkvim
 
 <a href="https://nixos.wiki/wiki/Flakes" target="_blank">
 	<img alt="Nix Flakes Ready" src="https://img.shields.io/static/v1?logo=nixos&logoColor=d8dee9&label=Nix%20Flakes&labelColor=5e81ac&message=Ready&color=d8dee9&style=for-the-badge">
@@ -17,19 +17,13 @@
 
 > Customized Neovim, ready for development out of the box.
 
-## Screenshots
-
-![Standard](https://user-images.githubusercontent.com/7005773/189502030-d8f190d1-1ff9-4244-ba25-c47ffcde887f.png)
-![Diagnostics](https://user-images.githubusercontent.com/7005773/189502035-9d09ca7c-82da-4537-8bab-d08d460b439c.png)
-![Dashboard](https://user-images.githubusercontent.com/7005773/189502036-64e939c8-1f53-40dc-a781-8cf37ec3d57d.png)
-
 ## Try Without Installing
 
 You can try this configuration out without committing to installing it on your system by running
 the following command.
 
 ```nix
-nix run github:jakehamilton/neovim
+nix run github:dukeofcool199/neovim
 ```
 
 ## Install
@@ -39,7 +33,7 @@ nix run github:jakehamilton/neovim
 You can install this package imperatively with the following command.
 
 ```nix
-nix profile install github:jakehamilton/neovim
+nix profile install github:dukeofcool199/neovim
 ```
 
 ### Nix Configuration
@@ -61,7 +55,7 @@ You can install this package by adding it as an input to your Nix flake.
 		};
 
 		neovim = {
-			url = "github:jakehamilton/neovim";
+			url = "github:dukeofcool199/neovim";
 			# This flake currently requires changes that are only on the Unstable channel.
 			inputs.nixpkgs.follows = "nixpkgs";
 			inputs.unstable.follows = "unstable";
@@ -81,18 +75,5 @@ You can install this package by adding it as an input to your Nix flake.
 				neovim.overlays."package/neovim"
 			];
 		};
-}
-```
-
-If you've added the overlay from this flake, then in your system configuration
-you can add the `plusultra.neovim` package.
-
-```nix
-{ pkgs }:
-
-{
-	environment.systemPackages = with pkgs; [
-		plusultra.neovim
-	];
 }
 ```
