@@ -10,3 +10,7 @@ end
 
 -- Exit terminal mode.
 map("t", "<C-o>", "<C-\\><C-n>", { silent = true })
+map("n", "<C-k>", ":wincmd k<cr>", { silent = true })
+map("n", "<C-j>", ":wincmd j<cr>", { silent = true })
+map("n", "<C-h>", ":wincmd h<cr>", { silent = true })
+map("n", "<C-l>", ":wincmd l<cr>", { silent = true })
