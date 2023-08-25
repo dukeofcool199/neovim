@@ -13,11 +13,7 @@ which_key.register({
 		name = "Toggle",
 		h = {
 			function()
-				if vim.o.hlsearch then
-					vim.o.hlsearch = false
-				else
-					vim.o.hlsearch = true
-				end
+				vim.o.hlsearch = not vim.o.hlsearch
 			end,
 			"Highlight"
 		},
