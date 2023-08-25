@@ -87,12 +87,6 @@ tree.setup {
 }
 
 which_key.register({
-	["<C-f>"] = { "<cmd>:NvimTreeToggle<cr>", "Toggle Tree" },
+	["<C-f>"] = { "<cmd>:NvimTreeFindFile<cr>", "Open current file in tree" },
+	["<C-n>"] = { "<cmd>:NvimTreeToggle<cr>", "Close tree" },
 }, { mode = "n", silent = true })
-
-which_key.register({
-	g = {
-		name = "Go",
-		f = { "<cmd>:NvimTreeFindFile<cr>", "Current File" },
-	},
-}, { mode = "n", prefix = "<leader>", silent = true })
