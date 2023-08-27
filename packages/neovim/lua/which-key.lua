@@ -18,4 +18,9 @@ which_key.register({
 			"Highlight"
 		},
 	},
+	s = {
+		name = "Split",
+		v = { "<cmd>:vsplit<cr>", "vertical split" },
+		h = { "<cmd>:split<cr>", "horizontal split" }
+	}
 }, { mode = "n", prefix = "<leader>" })
