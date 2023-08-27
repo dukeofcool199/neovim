@@ -200,4 +200,7 @@ with vimPlugins; [
   #vuejs
   vim-vue-plugin
 
+  #ledger
+  vim-ledger
+
 ]
