@@ -18,9 +18,4 @@ which_key.register({
 			"Highlight"
 		},
 	},
-	s = {
-		name = "Session",
-		s = { "<cmd>SessionSave<cr>", "Save" },
-		l = { "<cmd>SessionLoad<cr>", "Load" },
-	},
 }, { mode = "n", prefix = "<leader>" })
