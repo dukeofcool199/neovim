@@ -102,6 +102,7 @@ mkLuaConfigs [
   ./indent.lua
   ./context.lua
   ./which-key.lua
+  ./tabs.lua
   ./wrap-toggle.lua
   ./quit.lua
   ./zen.lua
