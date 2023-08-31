@@ -104,5 +104,6 @@ mkLuaConfigs [
   ./which-key.lua
   ./wrap-toggle.lua
   ./quit.lua
+  ./zen.lua
 ]
 

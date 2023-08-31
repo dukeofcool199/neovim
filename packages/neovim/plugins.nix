@@ -200,6 +200,9 @@ with vimPlugins; [
   #vuejs
   vim-vue-plugin
 
+  #zen mode
+  zen-mode-nvim
+
   #ledger
   vim-ledger
 
