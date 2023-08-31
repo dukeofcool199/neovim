@@ -5,11 +5,11 @@ which_key.register({
 		g = { "<cmd>:e#<cr>", "Previous Buffer" },
 	},
 	t = {
-		e = { "<cmd>tabedit ", "New Tab" },
+		e = { "<cmd>:tabedit<cr>", "New Tab" },
 		l = {
-			"<cmd>tabnext<cr>",
+			"<cmd>:tabnext<cr>",
 			"Next Tab" },
-		h = { "<cmd>tabprevious<cr>",
+		h = { "<cmd>:tabprevious<cr>",
 			"Previous Tab" }
 	}
 }, { mode = "n", prefix = "<leader>", silent = true })
