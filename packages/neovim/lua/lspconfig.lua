@@ -179,6 +179,12 @@ lsp.html.setup {
 	capabilities = capabilities,
 }
 
+-- use the haskell language server specific to the project
+lsp.hls.setup {
+	on_attach = on_attach,
+	capabilities = capabilities,
+}
+
 -- CSS
 lsp.cssls.setup {
 	on_attach = on_attach,
