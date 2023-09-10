@@ -182,6 +182,7 @@ lsp.html.setup {
 -- use the haskell language server specific to the project
 lsp.hls.setup {
 	on_attach = on_attach,
+	filetypes = { 'haskell', 'lhaskell', 'cabal' },
 	capabilities = capabilities,
 }
 
