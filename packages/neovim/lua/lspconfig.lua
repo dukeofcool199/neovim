@@ -145,14 +145,14 @@ lsp.tsserver.setup {
 
 lsp.volar.setup {
 	cmd = { '@volar@', "--stdio" },
+	root_dir = vim.fs.dirname(vim.fs.find({ 'vite.config.*', }, { upward = true })[1]),
 	init_options = {
 		typescript = {
 			tsdk = '@typescript@/lib'
 		}
 	},
-	filetypes = {
-		"vue",
-	},
+	filetypes =
+	{ 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue', 'json' },
 }
 
 -- ESLint
