@@ -111,6 +111,7 @@ with vimPlugins; [
   nvim-jdtls
   trouble-nvim
   prettier-nvim
+  emmet-vim
 
   # Autocomplete
   nvim-cmp
