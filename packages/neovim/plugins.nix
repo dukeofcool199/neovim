@@ -129,6 +129,9 @@ with vimPlugins; [
   vim-surround
   vim-commentary
 
+  # writing
+  vim-pencil
+
   # Movement
   hop-nvim
   neoscroll-nvim
