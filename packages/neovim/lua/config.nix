@@ -105,7 +105,6 @@ mkLuaConfigs [
   ./tabs.lua
   ./wrap-toggle.lua
   ./quit.lua
-  ./lsp_lines.lua
   ./zen.lua
 ]
 

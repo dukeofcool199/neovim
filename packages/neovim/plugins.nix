@@ -207,9 +207,6 @@ with vimPlugins; [
   #zen mode
   zen-mode-nvim
 
-  #lsp lines
-  lsp_lines-nvim
-
   #ledger
   vim-ledger
 
