@@ -152,7 +152,7 @@ lsp.volar.setup {
 		}
 	},
 	filetypes =
-	{ 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue', 'json' },
+	{ 'vue' },
 }
 
 -- ESLint
