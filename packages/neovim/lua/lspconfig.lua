@@ -152,7 +152,7 @@ lsp.volar.setup {
 		}
 	},
 	filetypes =
-	{ 'vue' },
+	{ 'vue', "typescript" },
 }
 
 -- ESLint
