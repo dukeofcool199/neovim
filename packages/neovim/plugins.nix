@@ -79,6 +79,16 @@ let
       sha256 = "12yrmnphspb3nyrsgvmp5m270k5hkw1gna904ypl90smskc4wiyx";
     };
   };
+  copilot-lua = vimUtils.buildVimPluginFrom2Nix {
+    pname = "copilot.lua";
+    version = "0.10.x";
+    src = fetchFromGitHub {
+      owner = "zbirenbaum";
+      repo = "copilot.lua";
+      rev = "73047082d72fcfdde1f73b7f17ad495cffcbafaa";
+      hash = "sha256-z19D6CybF2TkpOreOqUFTT2uyX8yRt13b/4JNrWEL5U=";
+    };
+  };
 in
 with vimPlugins; [
   # Icons
@@ -209,5 +219,8 @@ with vimPlugins; [
 
   #ledger
   vim-ledger
+
+  #ai
+  copilot-lua
 
 ]

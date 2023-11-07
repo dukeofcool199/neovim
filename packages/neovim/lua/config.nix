@@ -67,6 +67,7 @@ mkLuaConfigs [
   ./git.lua
   ./gitsigns.lua
   ./hop.lua
+  ./copilot.lua
   ./icon-picker.lua
   ./keys.lua
   {
