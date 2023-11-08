@@ -1,3 +1,5 @@
+local which_key = require("which-key")
+
 require('copilot').setup({
 	panel = {
 		enabled = true,
@@ -10,13 +12,13 @@ require('copilot').setup({
 			open = "<M-CR>"
 		},
 		layout = {
-			position = "bottom", -- | top | left | right
+			position = "right", -- | top | left | right
 			ratio = 0.4
 		},
 	},
 	suggestion = {
 		enabled = true,
-		auto_trigger = false,
+		auto_trigger = true,
 		debounce = 75,
 		keymap = {
 			accept = "<C-A>",
@@ -40,3 +42,11 @@ require('copilot').setup({
 	copilot_node_command = 'node', -- Node.js version must be > 18.x
 	server_opts_overrides = {},
 })
+
+which_key.register({
+	p = {
+		name = "Copilot",
+		p = { "<cmd>:Copilot panel<CR>", "toggle copilot panel" },
+		s = { "<cmd>:Copilot suggestion<CR>", "toggle copilot suggestsions" }
+	}
+}, { mode = "n", prefix = "<leader>", noremap = true, silent = true })
