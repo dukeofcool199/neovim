@@ -173,8 +173,8 @@ with vimPlugins; [
 
   # Git
   gitsigns-nvim
+  vim-fugitive
   # vim-gitgutter
-  # vim-fugitive
   # git-messenger-vim
 
   # Which Key
