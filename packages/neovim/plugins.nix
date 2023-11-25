@@ -223,4 +223,8 @@ with vimPlugins; [
   #ai
   copilot-lua
 
+  #svelte
+  vim-svelte
+  nvim-treesitter-parsers.svelte
+
 ]

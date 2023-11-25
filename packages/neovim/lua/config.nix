@@ -85,6 +85,7 @@ mkLuaConfigs [
       tailwindLanguageServer = "${nodePackages.tailwindcss-language-server}/bin/tailwindcss-language-server";
       astroLanguageServer = "${nodePackages.astrojs-language-server}/bin/astro-ls";
       volar = "${nodePackages.volar}/bin/vue-language-server";
+      svelte = "${nodePackages.svelte-language-server}/bin/svelteserver";
     };
   }
   ./lualine.lua

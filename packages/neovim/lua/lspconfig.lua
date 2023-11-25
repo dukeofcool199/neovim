@@ -155,6 +155,13 @@ lsp.volar.setup {
 	{ 'vue', "typescript" },
 }
 
+lsp.svelte.setup {
+	cmd = { '@svelte@', "--stdio" },
+	root_dir = vim.fs.dirname(vim.fs.find({ 'svelte.config.*', })[1]),
+	filetypes =
+	{ 'svelte' },
+}
+
 -- ESLint
 -- lsp.eslint.setup {
 -- 	on_attach = on_attach,
