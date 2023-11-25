@@ -172,7 +172,7 @@ with vimPlugins; [
   toggleterm-nvim
 
   # Git
-  gitsigns-nvim
+  # gitsigns-nvim
   vim-fugitive
   # vim-gitgutter
   # git-messenger-vim

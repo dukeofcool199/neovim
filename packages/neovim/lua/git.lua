@@ -1,3 +1,5 @@
+local which_key = require("which-key")
+
 vim.api.nvim_create_augroup("bufcheck", { clear = true })
 
 vim.api.nvim_create_autocmd("FileType", {
@@ -5,3 +7,11 @@ vim.api.nvim_create_autocmd("FileType", {
 	pattern = { "gitcommit", "gitrebase" },
 	command = "startinsert | 1",
 })
+
+which_key.register({
+	g = {
+		name = "Git",
+		w = { "<cmd>:Gwrite<cr>", "Git write" },
+		c = { "<cmd>:GCommit<cr>", "Git commit" }
+	}
+}, { mode = "n", prefix = "<leader>" })
