@@ -86,8 +86,8 @@ let
 in
 wrapped-neovim.overrideAttrs (oldAttrs: {
   meta = with lib; {
-    description = "Neovim Plus Ultra";
-    maintainers = with maintainers; [ jakehamilton ];
+    description = "Jenkvim";
+    maintainers = with maintainers; [ dukeofcool199 ];
     mainProgram = "nvim";
     platforms = with platforms;
       linux
