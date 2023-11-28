@@ -89,6 +89,17 @@ let
       hash = "sha256-z19D6CybF2TkpOreOqUFTT2uyX8yRt13b/4JNrWEL5U=";
     };
   };
+  plantuml-previewer = vimUtils.buildVimPluginFrom2Nix rec {
+    pname = "plantuml-previewer";
+    version = "v1.5.1";
+    src = fetchFromGitHub {
+      owner = "weirongxu";
+      repo = "plantuml-previewer.vim";
+      rev = "6565c3a";
+      hash = "sha256-ykqRrWYTWzjXaSsoxAsyBtbU2ASzxY1yeoGWWtWbRQU=";
+
+    };
+  };
 in
 with vimPlugins; [
   # Icons
@@ -189,6 +200,10 @@ with vimPlugins; [
   vim-markdown
   vim-markdown-toc
 
+  #documenting
+  plantuml-syntax
+  plantuml-previewer
+
   # Dotbox
   dotbox-nvim
 
@@ -222,6 +237,7 @@ with vimPlugins; [
 
   #ai
   copilot-lua
+
 
   #svelte
   vim-svelte
