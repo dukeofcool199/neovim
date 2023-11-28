@@ -157,7 +157,7 @@ lsp.volar.setup {
 
 lsp.svelte.setup {
 	cmd = { '@svelte@', "--stdio" },
-	root_dir = vim.fs.dirname(vim.fs.find({ 'svelte.config.*', })[1]),
+	root_dir = vim.fs.dirname(vim.fs.find({ 'svelte.config.*' }, { upward = true })[1]),
 	filetypes =
 	{ 'svelte' },
 }
