@@ -1,6 +1,6 @@
 { pkgs, ... }:
 
-with pkgs; [
+with pkgs; with nodePackages; [
   # Grammar
   tree-sitter
 
@@ -10,6 +10,8 @@ with pkgs; [
   rnix-lsp
   rust-analyzer
   lua-language-server
+  svelte-language-server
+  volar
 
   # Language Server Dependencies
   nodePackages.pyright
@@ -30,8 +32,15 @@ with pkgs; [
   lua5_1
 
   # Node
-  nodejs-18_x
+  nodejs_20
 
   # Misc
   fortune
+
+  #plantuml
+  plantuml
+  plantuml-c4
+
+  #graphics
+  graphviz
 ]
