@@ -310,6 +310,7 @@ prettier.setup {
 		"typescript",
 		"typescriptreact",
 		"vue",
+    "svelte",
 		"yaml",
 	},
 	cli_options = {
