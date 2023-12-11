@@ -1,2 +1,3 @@
 result
 packages/neovim/lua/.luarc.json
+.direnv
