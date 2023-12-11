@@ -89,6 +89,16 @@ let
       hash = "sha256-z19D6CybF2TkpOreOqUFTT2uyX8yRt13b/4JNrWEL5U=";
     };
   };
+  plantuml-previewer = vimUtils.buildVimPlugin {
+    pname = "plantuml.vim";
+    version = "idk";
+    src = fetchFromGitHub {
+      owner = "Groveer";
+      repo = "plantuml.nvim";
+      rev = "f669b91835e9d45b9a7f6a5637bf65f4e52003d7";
+      hash = "sha256-Oo/0Xgv1SLJREhqm9fIVOKPXy8hB2iant4acethdfX8=";
+    };
+  };
 in
 with vimPlugins; [
   # Icons
@@ -191,8 +201,7 @@ with vimPlugins; [
 
   #documenting
   plantuml-syntax
-  plantuml-previewer-vim
-  open-browser-vim
+  plantuml-previewer
 
   # Dotbox
   dotbox-nvim

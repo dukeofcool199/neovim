@@ -43,4 +43,5 @@ with pkgs; with nodePackages; [
 
   #graphics
   graphviz
+  imv
 ]

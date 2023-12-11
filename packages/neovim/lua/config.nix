@@ -108,5 +108,6 @@ mkLuaConfigs [
   ./wrap-toggle.lua
   ./quit.lua
   ./zen.lua
+  ./plantuml.lua
 ]
 
