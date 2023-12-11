@@ -9,7 +9,7 @@
 }:
 
 let
-  icon-picker = vimUtils.buildVimPluginFrom2Nix {
+  icon-picker = vimUtils.buildVimPlugin {
     pname = "icon-picker.nvim";
     version = "unstable-2022-09-03";
     src = fetchFromGitHub {
@@ -19,7 +19,7 @@ let
       sha256 = "15zygdg8g8jf1n75nclrbddvp9fz8k4jiczv0amgc7x1dy46cbvy";
     };
   };
-  telescope-manix = vimUtils.buildVimPluginFrom2Nix {
+  telescope-manix = vimUtils.buildVimPlugin {
     pname = "telescope-manix";
     version = "unstable-2022-10-10";
     src = fetchFromGitHub {
@@ -29,7 +29,7 @@ let
       sha256 = "059qfrvd7bigqkkjc5g6wdrzb7a7x37xxnx99hx236sxraihaka7";
     };
   };
-  prettier-nvim = vimUtils.buildVimPluginFrom2Nix {
+  prettier-nvim = vimUtils.buildVimPlugin {
     pname = "prettier.nvim";
     version = "unstable-2022-11-14";
     src = fetchFromGitHub {
@@ -39,7 +39,7 @@ let
       sha256 = "1dh29q778b58rvyhqidfixs7gx0n40y650k8jgj2iq4674frxmvj";
     };
   };
-  tree-sitter-playground = vimUtils.buildVimPluginFrom2Nix {
+  tree-sitter-playground = vimUtils.buildVimPlugin {
     pname = "tree-sitter-playground";
     version = "unstable-2022-11-26";
     src = fetchFromGitHub {
@@ -49,7 +49,7 @@ let
       sha256 = "1yznmc5a32b4bw0c9q0jfkbd77xmi7rmihfr0f44bcgqdxlp8151";
     };
   };
-  dotbox-nvim = vimUtils.buildVimPluginFrom2Nix {
+  dotbox-nvim = vimUtils.buildVimPlugin {
     pname = "dotbox.nvim";
     version = "unstable-2022-11-26";
     src = fetchFromGitHub {
@@ -59,7 +59,7 @@ let
       sha256 = "0s65xsrqkjdy4zmqxh2gn17kh1d2b7w2jvwa6hrrw1nag4h6cids";
     };
   };
-  vim-astro = vimUtils.buildVimPluginFrom2Nix {
+  vim-astro = vimUtils.buildVimPlugin {
     pname = "vim-astro";
     version = "unstable-2022-01-11";
     src = fetchFromGitHub {
@@ -69,7 +69,7 @@ let
       sha256 = "1ild33hxiphj0z8b4kpcad4rai7q7jd0lsmhpa30kfgmyj5kh90z";
     };
   };
-  dbsession-nvim = vimUtils.buildVimPluginFrom2Nix {
+  dbsession-nvim = vimUtils.buildVimPlugin {
     pname = "dbsession.nvim";
     version = "unstable-2023-05-31";
     src = fetchFromGitHub {
@@ -79,7 +79,7 @@ let
       sha256 = "12yrmnphspb3nyrsgvmp5m270k5hkw1gna904ypl90smskc4wiyx";
     };
   };
-  copilot-lua = vimUtils.buildVimPluginFrom2Nix {
+  copilot-lua = vimUtils.buildVimPlugin {
     pname = "copilot.lua";
     version = "0.10.x";
     src = fetchFromGitHub {
@@ -87,17 +87,6 @@ let
       repo = "copilot.lua";
       rev = "73047082d72fcfdde1f73b7f17ad495cffcbafaa";
       hash = "sha256-z19D6CybF2TkpOreOqUFTT2uyX8yRt13b/4JNrWEL5U=";
-    };
-  };
-  plantuml-previewer = vimUtils.buildVimPluginFrom2Nix rec {
-    pname = "plantuml-previewer";
-    version = "v1.5.1";
-    src = fetchFromGitHub {
-      owner = "weirongxu";
-      repo = "plantuml-previewer.vim";
-      rev = "6565c3a";
-      hash = "sha256-ykqRrWYTWzjXaSsoxAsyBtbU2ASzxY1yeoGWWtWbRQU=";
-
     };
   };
 in
@@ -202,7 +191,8 @@ with vimPlugins; [
 
   #documenting
   plantuml-syntax
-  plantuml-previewer
+  plantuml-previewer-vim
+  open-browser-vim
 
   # Dotbox
   dotbox-nvim
