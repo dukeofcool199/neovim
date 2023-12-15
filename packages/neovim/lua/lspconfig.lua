@@ -128,7 +128,7 @@ end
 -- TypeScript
 lsp.tsserver.setup {
   on_attach = on_attach,
-  cmd = { "@typescriptLanguageServer@", "--stdio", "--tsserver-path", "@typescript@" },
+  cmd = { "@typescriptLanguageServer@", "--stdio" },
   capabilities = capabilities,
   commands = {
     OrganizeImports = {
