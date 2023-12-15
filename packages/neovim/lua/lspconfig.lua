@@ -2,7 +2,7 @@
 -- https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md
 local lsp = require("lspconfig")
 local null_ls = require("null-ls")
-local illuminate = require("illuminate")
+-- local illuminate = require("illuminate")
 local navic = require("nvim-navic")
 local util = require("lspconfig/util")
 
@@ -37,7 +37,7 @@ local on_attach = function(client, buffer)
     navic.attach(client, buffer)
   end
 
-  illuminate.on_attach(client)
+  -- illuminate.on_attach(client)
 
   -- Enable completion triggered by <c-x><c-o>
   vim.api.nvim_buf_set_option(buffer, 'omnifunc', 'v:lua.vim.lsp.omnifunc')

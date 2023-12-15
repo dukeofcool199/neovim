@@ -163,7 +163,7 @@ with vimPlugins; [
   editorconfig-nvim
 
   # Highlighting & View Augmentation
-  vim-illuminate
+  # vim-illuminate
   todo-comments-nvim
   delimitMate
   twilight-nvim
