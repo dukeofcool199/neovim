@@ -7,34 +7,36 @@ local api = require("telescope.builtin")
 local manix = require("telescope-manix")
 
 telescope.setup {
-	defaults = {
-		mappings = {
-			i = {
-				["<C-h>"] = "which_key"
-			},
-		},
-	},
+  defaults = {
+    mappings = {
+      i = {
+        ["<C-h>"] = "which_key"
+      },
+    },
+  },
 }
 
 telescope.load_extension("manix")
 
 which_key.register({
-	f = {
-		name = "File",
-		f = { "<cmd>Telescope find_files<cr>", "Find File" },
-		F = { function()
-			api.find_files { hidden = true }
-		end
-		, "Find File (Hidden)" },
-		r = { "<cmd>Telescope oldfiles<cr>", "Recent File" },
-		g = { "<cmd>Telescope live_grep<cr>", "Grep" },
-		G = { function()
-			api.live_grep { hidden = true }
-		end, "Grep (Hidden Files)" },
-		b = { "<cmd>Telescope buffers<cr>", "Find Buffer" },
-		n = { "<cmd>Telescope manix<cr>", "Nix Documentation" },
-	},
+  f = {
+    name = "File",
+    f = { "<cmd>Telescope find_files<cr>", "Find File" },
+    F = { function()
+      api.find_files { hidden = true }
+    end
+    , "Find File (Hidden)" },
+    r = { "<cmd>Telescope oldfiles<cr>", "Recent File" },
+    g = { "<cmd>Telescope live_grep<cr>", "Grep" },
+    G = { function()
+      api.live_grep { hidden = true }
+    end, "Grep (Hidden Files)" },
+    b = { "<cmd>Telescope buffers<cr>", "Find Buffer" },
+    n = { "<cmd>Telescope manix<cr>", "Nix Documentation" },
+  },
 }, { mode = "n", prefix = "<leader>", silent = true })
+
 which_key.register({
-	["<C-p>"] = { "<cmd>Telescope find_files<cr>", "Find File" }
+  ["<C-p>"] = { "<cmd>Telescope find_files<cr>", "Find File" },
+  ["<C-c>"] = { "<cmd>Telescope commands<cr>", "Run Command" }
 })
