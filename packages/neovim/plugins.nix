@@ -237,6 +237,9 @@ with vimPlugins; [
   #ai
   copilot-lua
 
+  # flutter
+  flutter-tools-nvim
+
 
   #svelte
   vim-svelte

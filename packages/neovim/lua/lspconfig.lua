@@ -6,7 +6,9 @@ local null_ls = require("null-ls")
 local navic = require("nvim-navic")
 local util = require("lspconfig/util")
 
+
 local which_key = require("which-key")
+
 
 -- @NOTE(jakehamilton): The `neodev` module requires that it is run
 -- before `lspconfig` setup.
@@ -22,7 +24,7 @@ require("neodev").setup {
 
 -- Use an on_attach function to only map the following keys
 -- after the language server attaches to the current buffer.
-local on_attach = function(client, buffer)
+local my_on_attach = function(client, buffer)
   -- Disable formatting from duplicate providers
   if client.name == "tsserver"
       or client.name == "html"
@@ -120,14 +122,20 @@ local servers = {
 
 for _, name in pairs(servers) do
   lsp[name].setup {
-    on_attach = on_attach,
+    on_attach = my_on_attach,
     capabilities = capabilities,
   }
 end
 
+require("flutter-tools").setup {
+  lsp = {
+    on_attach = my_on_attach
+  }
+}
+
 -- TypeScript
 lsp.tsserver.setup {
-  on_attach = on_attach,
+  on_attach = my_on_attach,
   cmd = { "@typescriptLanguageServer@", "--stdio" },
   capabilities = capabilities,
   commands = {
@@ -174,42 +182,42 @@ lsp.svelte.setup {
 
 -- JSON
 lsp.jsonls.setup {
-  on_attach = on_attach,
+  on_attach = my_on_attach,
   cmd = { "@jsonLanguageServer@", "--stdio" },
   capabilities = capabilities,
 }
 
 -- HTML
 lsp.html.setup {
-  on_attach = on_attach,
+  on_attach = my_on_attach,
   cmd = { "@htmlLanguageServer@", "--stdio" },
   capabilities = capabilities,
 }
 
 -- use the haskell language server specific to the project
 lsp.hls.setup {
-  on_attach = on_attach,
+  on_attach = my_on_attach,
   filetypes = { 'haskell', 'lhaskell', 'cabal' },
   capabilities = capabilities,
 }
 
 -- CSS
 lsp.cssls.setup {
-  on_attach = on_attach,
+  on_attach = my_on_attach,
   cmd = { "@cssLanguageServer@", "--stdio" },
   capabilities = capabilities,
 }
 
 -- Docker
 lsp.dockerls.setup {
-  on_attach = on_attach,
+  on_attach = my_on_attach,
   cmd = { "@dockerLanguageServer@", "--stdio" },
   capabilities = capabilities,
 }
 
 -- Prisma
 lsp.prismals.setup {
-  on_attach = on_attach,
+  on_attach = my_on_attach,
   cmd = { "@prismaLanguageServer@", "--stdio" },
   capabilities = capabilities,
   settings = {
@@ -221,14 +229,14 @@ lsp.prismals.setup {
 
 -- Tailwind
 lsp.tailwindcss.setup {
-  on_attach = on_attach,
+  on_attach = my_on_attach,
   cmd = { "@tailwindLanguageServer@", "--stdio" },
   capabilities = capabilities,
 }
 
 -- Lua
 lsp.lua_ls.setup {
-  on_attach = on_attach,
+  on_attach = my_on_attach,
   cmd = { "lua-language-server" },
   capabilities = capabilities,
   settings = {
@@ -253,7 +261,7 @@ lsp.lua_ls.setup {
 vim.g.astro_typescript = "enable"
 
 lsp.astro.setup {
-  on_attach = on_attach,
+  on_attach = my_on_attach,
   cmd = { "@astroLanguageServer@", "--stdio" },
   init_options = {
     typescript = {
