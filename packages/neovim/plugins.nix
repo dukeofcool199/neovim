@@ -106,7 +106,6 @@ with vimPlugins; [
 
   # Syntax
   vim-nix
-  nvim-ts-rainbow
   (nvim-treesitter.withPlugins
     (plugins: tree-sitter.allGrammars ++ [ nvim-treesitter-parsers.vue ]))
   tree-sitter-playground
