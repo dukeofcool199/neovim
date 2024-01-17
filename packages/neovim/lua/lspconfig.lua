@@ -97,17 +97,6 @@ local my_on_attach = function(client, buffer)
   end
 end
 
--- @TODO(jakehamilton): Add support for cssmodules. Requires
--- 	adding cssmodules-language-server.
--- lsp.cssmodules_ls.setup {}
-
--- @TODO(jakehamilton): Add support for vim. Requires
--- 	adding vim-language-server.
--- lsp.vim.setup {}
-
--- @TODO(jakehamilton): Add support for yaml. Requires
--- 	adding yaml-language-server.
--- lsp.yamlls.setup {}
 
 local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
