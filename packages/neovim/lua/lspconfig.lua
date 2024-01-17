@@ -116,11 +116,6 @@ for _, name in pairs(servers) do
   }
 end
 
-require("flutter-tools").setup {
-  lsp = {
-    on_attach = my_on_attach
-  }
-}
 
 -- TypeScript
 lsp.tsserver.setup {
