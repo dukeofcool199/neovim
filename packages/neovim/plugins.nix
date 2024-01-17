@@ -106,8 +106,7 @@ with vimPlugins; [
 
   # Syntax
   vim-nix
-  (nvim-treesitter.withPlugins
-    (plugins: tree-sitter.allGrammars ++ [ nvim-treesitter-parsers.vue ]))
+  nvim-treesitter.withAllGrammars
   tree-sitter-playground
   nvim-treesitter-context
 
