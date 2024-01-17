@@ -153,17 +153,6 @@ lsp.svelte.setup {
   filetypes =
   { 'svelte' },
 }
-
--- ESLint
--- lsp.eslint.setup {
--- 	on_attach = on_attach,
--- 	cmd = { "@eslintLanguageServer@", "--stdio" },
--- 	capabilities = capabilities,
--- 	settings = {
--- 		format = false,
--- 	},
--- }
-
 -- JSON
 lsp.jsonls.setup {
   on_attach = my_on_attach,
