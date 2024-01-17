@@ -25,6 +25,7 @@ which_key.register({
   s = {
     name = "Split",
     v = { "<cmd>:vsplit<cr>", "vertical split" },
-    h = { "<cmd>:split<cr>", "horizontal split" }
-  }
+    h = { "<cmd>:split<cr>", "horizontal split" },
+    s = { "<cmd>:w!<cr>", "save" }
+  },
 }, { mode = "n", prefix = "<leader>" })
