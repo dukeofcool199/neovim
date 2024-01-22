@@ -12,6 +12,7 @@ with pkgs; with nodePackages; [
   lua-language-server
   svelte-language-server
   volar
+  templ
 
   # Language Server Dependencies
   nodePackages.pyright

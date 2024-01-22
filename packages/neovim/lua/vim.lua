@@ -20,6 +20,7 @@ vim.opt.scrolloff = 10
 vim.opt.wrap = true
 vim.opt.linebreak = true
 
+vim.filetype.add({ extension = { templ = "templ" } })
 -- Stop the sign column from flashing in/out with gitsigns.
 vim.opt.signcolumn = "yes"
 
@@ -28,9 +29,9 @@ vim.opt.mouse = ""
 
 -- Enable spell checking.
 vim.api.nvim_create_autocmd(
-	{ "BufRead", "BufNewFile" },
-	{
-		pattern = { "*.txt", "*.md", "*.tex" },
-		command = "setlocal spell",
-	}
+  { "BufRead", "BufNewFile" },
+  {
+    pattern = { "*.txt", "*.md", "*.tex" },
+    command = "setlocal spell",
+  }
 )

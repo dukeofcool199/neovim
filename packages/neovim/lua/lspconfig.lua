@@ -106,6 +106,7 @@ local servers = {
   -- @TODO(jakehamilton): Replace this with sqlls when a package exists in NixPkgs.
   -- 'sqls',
   'gopls',
+  'templ',
   'rust_analyzer',
 }
 
@@ -165,6 +166,7 @@ lsp.html.setup {
   on_attach = my_on_attach,
   cmd = { "@htmlLanguageServer@", "--stdio" },
   capabilities = capabilities,
+  filetypes = { "html", "templ" },
 }
 
 -- use the haskell language server specific to the project
@@ -205,6 +207,7 @@ lsp.tailwindcss.setup {
   on_attach = my_on_attach,
   cmd = { "@tailwindLanguageServer@", "--stdio" },
   capabilities = capabilities,
+  init_options = { userLanguages = { templ = "html" } },
 }
 
 -- Lua
