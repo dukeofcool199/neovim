@@ -226,6 +226,8 @@ with vimPlugins; [
   # Line Indentation
   indent-blankline-nvim
 
+  rainbow-delimiters-nvim
+
   #vuejs
   vim-vue-plugin
 
