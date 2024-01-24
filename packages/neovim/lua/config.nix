@@ -109,5 +109,6 @@ mkLuaConfigs [
   ./quit.lua
   ./zen.lua
   ./plantuml.lua
+  ./auto-save.lua
 ]
 
