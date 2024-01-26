@@ -150,9 +150,6 @@ with vimPlugins; [
   # writing
   vim-pencil
 
-  #saving
-  auto-save-nvim
-
   # Movement
   hop-nvim
   neoscroll-nvim
