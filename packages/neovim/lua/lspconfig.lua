@@ -190,23 +190,12 @@ lsp.dockerls.setup {
   capabilities = capabilities,
 }
 
--- Prisma
-lsp.prismals.setup {
-  on_attach = my_on_attach,
-  cmd = { "@prismaLanguageServer@", "--stdio" },
-  capabilities = capabilities,
-  settings = {
-    prisma = {
-      prismaFmtBinPath = "@prismaFormat@",
-    }
-  },
-}
-
 -- Tailwind
 lsp.tailwindcss.setup {
   on_attach = my_on_attach,
   cmd = { "@tailwindLanguageServer@", "--stdio" },
   capabilities = capabilities,
+  filetypes = { "templ", "astro", "javascript", "typescript", "react", "html", "typescriptreact", "vue", "svelte" },
   init_options = { userLanguages = { templ = "html" } },
 }
 
