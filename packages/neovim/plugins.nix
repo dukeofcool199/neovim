@@ -168,6 +168,7 @@ with vimPlugins; [
 
   # Theme
   monokai-pro-nvim
+  awesome-vim-colorschemes
 
   # Status Line & Buffer Line
   lualine-nvim
@@ -196,6 +197,7 @@ with vimPlugins; [
   markdown-preview-nvim
   vim-markdown
   vim-markdown-toc
+  typst-vim
 
   #documenting
   plantuml-syntax
