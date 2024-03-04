@@ -86,6 +86,7 @@ mkLuaConfigs [
       astroLanguageServer = "${nodePackages.astrojs-language-server}/bin/astro-ls";
       volar = "${nodePackages.volar}/bin/vue-language-server";
       svelte = "${nodePackages.svelte-language-server}/bin/svelteserver";
+      pyright = "${nodePackages.pyright}/bin/pyright";
     };
   }
   ./lualine.lua

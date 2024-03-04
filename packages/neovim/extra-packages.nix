@@ -7,6 +7,7 @@ with pkgs; with nodePackages; [
   # Language Servers
   sqls
   gopls
+  pyright
   rnix-lsp
   rust-analyzer
   lua-language-server
