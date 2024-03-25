@@ -8,7 +8,6 @@ with pkgs; with nodePackages; [
   sqls
   gopls
   pyright
-  rnix-lsp
   rust-analyzer
   lua-language-server
   svelte-language-server
@@ -29,6 +28,7 @@ with pkgs; with nodePackages; [
 
   # Documentation
   manix
+
 
   # Lua
   lua5_1

@@ -65,6 +65,7 @@ mkLuaConfigs [
   ./dashboard.lua
   ./fzf.lua
   ./git.lua
+  ./neogen.lua
   ./gitsigns.lua
   ./hop.lua
   ./copilot.lua

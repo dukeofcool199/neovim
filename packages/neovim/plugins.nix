@@ -202,6 +202,7 @@ with vimPlugins; [
   #documenting
   plantuml-syntax
   plantuml-previewer
+  neogen
 
   # Dotbox
   dotbox-nvim
