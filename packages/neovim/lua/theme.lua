@@ -1,5 +1,5 @@
 require("monokai-pro")
 
 vim.cmd [[
-	colorscheme gruvbox
+  colorscheme sonokai
 ]]
