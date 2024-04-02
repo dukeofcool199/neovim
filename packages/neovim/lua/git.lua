@@ -12,6 +12,7 @@ which_key.register({
   g = {
     name = "Git",
     w = { "<cmd>:Gwrite<cr>", "Git write" },
-    c = { "<cmd>:G commit<cr>", "Git commit" }
+    c = { "<cmd>:G commit<cr>", "Git commit" },
+    p = { "<cmd>:Git push<cr>", "Git push" }
   }
 }, { mode = "n", prefix = "<leader>" })
