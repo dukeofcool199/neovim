@@ -102,6 +102,7 @@ local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
 -- Configure servers with common settings.
 local servers = {
+  'nixd',
   'gopls',
   'pyright',
   'templ',

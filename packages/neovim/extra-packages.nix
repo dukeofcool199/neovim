@@ -12,6 +12,8 @@ with pkgs; with nodePackages; [
   lua-language-server
   svelte-language-server
   volar
+  nixd
+  alejandra
   templ
 
   # Language Server Dependencies

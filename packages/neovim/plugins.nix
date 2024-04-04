@@ -129,6 +129,7 @@ with vimPlugins; [
   nvim-jdtls
   trouble-nvim
   prettier-nvim
+  neoformat
   emmet-vim
 
   # Autocomplete
