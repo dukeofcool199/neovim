@@ -102,13 +102,13 @@ local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
 -- Configure servers with common settings.
 local servers = {
-  'nixd',
   'gopls',
   'pyright',
   'templ',
   'rust_analyzer',
   'ocamllsp',
 }
+
 
 for _, name in pairs(servers) do
   lsp[name].setup {
@@ -117,6 +117,15 @@ for _, name in pairs(servers) do
   }
 end
 
+
+lsp.nixd.setup {
+
+  formatting = {
+    formatCommand = "alejandra",
+    formatStdin = true,
+  },
+
+}
 
 -- TypeScript
 lsp.tsserver.setup {
