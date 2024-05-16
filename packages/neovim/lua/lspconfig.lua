@@ -107,6 +107,7 @@ local servers = {
   'pyright',
   'templ',
   'rust_analyzer',
+  'ocamllsp',
 }
 
 for _, name in pairs(servers) do
