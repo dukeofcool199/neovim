@@ -118,6 +118,8 @@ for _, name in pairs(servers) do
 end
 
 
+lsp.gleam.setup({})
+
 lsp.nixd.setup {
 
   formatting = {
