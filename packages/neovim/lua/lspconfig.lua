@@ -107,6 +107,7 @@ local servers = {
   'templ',
   'rust_analyzer',
   'ocamllsp',
+  'gleam'
 }
 
 
@@ -118,7 +119,6 @@ for _, name in pairs(servers) do
 end
 
 
-lsp.gleam.setup({})
 
 lsp.nixd.setup {
 
