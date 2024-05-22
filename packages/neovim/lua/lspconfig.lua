@@ -122,10 +122,10 @@ end
 
 lsp.nixd.setup {
 
-  formatting = {
-    formatCommand = "alejandra",
-    formatStdin = true,
-  },
+  -- formatting = {
+  --   formatCommand = "alejandra",
+  --   formatStdin = true,
+  -- },
 
 }
 
