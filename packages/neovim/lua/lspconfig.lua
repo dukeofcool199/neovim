@@ -156,7 +156,7 @@ lsp.volar.setup {
     }
   },
   filetypes =
-  { 'vue', "typescript" },
+  { 'vue' },
 }
 
 lsp.svelte.setup {
