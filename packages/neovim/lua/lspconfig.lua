@@ -107,7 +107,8 @@ local servers = {
   'templ',
   'rust_analyzer',
   'ocamllsp',
-  'gleam'
+  'gleam',
+  'zls'
 }
 
 
