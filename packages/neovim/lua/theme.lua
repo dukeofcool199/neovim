@@ -1,5 +1,5 @@
 require("monokai-pro")
 
 vim.cmd [[
-  colorscheme sonokai
+  colorscheme monokai-pro
 ]]
