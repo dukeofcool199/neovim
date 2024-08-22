@@ -91,7 +91,6 @@ mkLuaConfigs [
     };
   }
   ./lualine.lua
-  ./neoscroll.lua
   ./theme.lua
   ./telescope.lua
   ./tmux-navigator.lua
