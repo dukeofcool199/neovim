@@ -1,12 +1,5 @@
-{ lib
-, pkgs
-, vimPlugins
-, vimUtils
-, fetchFromGitHub
-, tree-sitter
-, callPackage
-, ...
-}:
+{ lib, pkgs, vimPlugins, vimUtils, fetchFromGitHub, tree-sitter, callPackage
+, ... }:
 
 let
   icon-picker = vimUtils.buildVimPlugin {
@@ -99,8 +92,7 @@ let
       hash = "sha256-Oo/0Xgv1SLJREhqm9fIVOKPXy8hB2iant4acethdfX8=";
     };
   };
-in
-with vimPlugins; [
+in with vimPlugins; [
   # Icons
   nvim-web-devicons
 
@@ -189,6 +181,8 @@ with vimPlugins; [
 
   # Which Key
   which-key-nvim
+
+  oil-nvim
 
   # Dashboard
   dashboard-nvim

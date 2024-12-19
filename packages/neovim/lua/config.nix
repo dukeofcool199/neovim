@@ -1,12 +1,5 @@
-{ lib
-, substituteAll
-, symlinkJoin
-, nodePackages
-, prisma-engines
-, makeWrapper
-, runCommand
-, ...
-}:
+{ lib, substituteAll, symlinkJoin, nodePackages, prisma-engines, makeWrapper
+, runCommand, ... }:
 
 with lib;
 let
@@ -15,14 +8,8 @@ let
   #   MY_ARG = "hello-world";
   # }
   mkLuaConfig = file: args:
-    let
-      module =
-        substituteAll
-          (args // {
-            src = file;
-          });
-    in
-    "luafile ${module}";
+    let module = substituteAll (args // { src = file; });
+    in "luafile ${module}";
 
   # Usage:
   # mkLuaConfigs [
@@ -30,14 +17,11 @@ let
   #   { file = ./some-other.lua; options = { MY_ARG = "hello-world"; }; }
   # ]
   mkLuaConfigs = files:
-    lib.concatMapStringsSep "\n"
-      (file:
-        if builtins.isAttrs file then
-          mkLuaConfig file.file file.options
-        else
-          mkLuaConfig file { }
-      )
-      files;
+    lib.concatMapStringsSep "\n" (file:
+      if builtins.isAttrs file then
+        mkLuaConfig file.file file.options
+      else
+        mkLuaConfig file { }) files;
 
   # eslintModules = symlinkJoin {
   #   name = "neovim-eslint-modules";
@@ -57,8 +41,7 @@ let
   #     makeWrapper $src/bin/vscode-eslint-language-server $out/bin/vscode-eslint-language-server \
   #       --set NPM_CONFIG_PREFIX ${eslintModules}
   #   '';
-in
-mkLuaConfigs [
+in mkLuaConfigs [
   ./bufferline.lua
   ./scope.lua
   ./cmp.lua
@@ -75,16 +58,24 @@ mkLuaConfigs [
     file = ./lspconfig.lua;
     options = {
       typescript = "${nodePackages.typescript}/lib/node_modules/typescript";
-      typescriptLanguageServer = "${nodePackages.typescript-language-server}/bin/typescript-language-server";
+      typescriptLanguageServer =
+        "${nodePackages.typescript-language-server}/bin/typescript-language-server";
       # eslintLanguageServer = "${wrappedESLintLanguageServer}/bin/vscode-eslint-language-server";
-      htmlLanguageServer = "${nodePackages.vscode-langservers-extracted}/bin/vscode-html-language-server";
-      cssLanguageServer = "${nodePackages.vscode-langservers-extracted}/bin/vscode-css-language-server";
-      jsonLanguageServer = "${nodePackages.vscode-langservers-extracted}/bin/vscode-json-language-server";
-      dockerLanguageServer = "${nodePackages.dockerfile-language-server-nodejs}/bin/docker-langserver";
-      prismaLanguageServer = "${nodePackages.prisma-language-server}/lib/node_modules/@prisma/language-server/dist/src/bin.js";
+      htmlLanguageServer =
+        "${nodePackages.vscode-langservers-extracted}/bin/vscode-html-language-server";
+      cssLanguageServer =
+        "${nodePackages.vscode-langservers-extracted}/bin/vscode-css-language-server";
+      jsonLanguageServer =
+        "${nodePackages.vscode-langservers-extracted}/bin/vscode-json-language-server";
+      dockerLanguageServer =
+        "${nodePackages.dockerfile-language-server-nodejs}/bin/docker-langserver";
+      prismaLanguageServer =
+        "${nodePackages.prisma-language-server}/lib/node_modules/@prisma/language-server/dist/src/bin.js";
       prismaFormat = "${prisma-engines}/bin/prisma-fmt";
-      tailwindLanguageServer = "${nodePackages.tailwindcss-language-server}/bin/tailwindcss-language-server";
-      astroLanguageServer = "${nodePackages.astrojs-language-server}/bin/astro-ls";
+      tailwindLanguageServer =
+        "${nodePackages.tailwindcss-language-server}/bin/tailwindcss-language-server";
+      astroLanguageServer =
+        "${nodePackages.astrojs-language-server}/bin/astro-ls";
       volar = "${nodePackages.volar}/bin/vue-language-server";
       svelte = "${nodePackages.svelte-language-server}/bin/svelteserver";
       pyright = "${nodePackages.pyright}/bin/pyright";
@@ -110,5 +101,6 @@ mkLuaConfigs [
   ./quit.lua
   ./zen.lua
   ./plantuml.lua
+  ./oil.lua
 ]
 
