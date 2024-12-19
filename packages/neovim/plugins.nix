@@ -184,9 +184,6 @@ in with vimPlugins; [
 
   oil-nvim
 
-  # Dashboard
-  dashboard-nvim
-  dbsession-nvim
 
   # Markdown
   markdown-preview-nvim

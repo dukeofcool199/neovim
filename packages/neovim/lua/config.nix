@@ -45,7 +45,6 @@ in mkLuaConfigs [
   ./bufferline.lua
   ./scope.lua
   ./cmp.lua
-  ./dashboard.lua
   ./fzf.lua
   ./git.lua
   ./neogen.lua
