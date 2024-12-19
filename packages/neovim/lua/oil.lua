@@ -79,7 +79,7 @@ require("oil").setup({
   use_default_keymaps = false,
   view_options = {
     -- Show files and directories that start with "."
-    show_hidden = false,
+    show_hidden = true,
     -- This function defines what is considered a "hidden" file
     is_hidden_file = function(name, bufnr)
       local m = name:match("^%.")
@@ -104,6 +104,7 @@ require("oil").setup({
     highlight_filename = function(entry, is_hidden, is_link_target, is_link_orphan)
       return nil
     end,
+    close_on_select = true,
   },
   -- Extra arguments to pass to SCP when moving/copying files over SSH
   extra_scp_args = {},
@@ -111,25 +112,27 @@ require("oil").setup({
   git = {
     -- Return true to automatically git add/mv/rm files
     add = function(path)
-      return false
+      return true
     end,
     mv = function(src_path, dest_path)
-      return false
+      return true
     end,
     rm = function(path)
-      return false
+      return true
     end,
   },
   -- Configuration for the floating window in oil.open_float
   float = {
     -- Padding around the floating window
-    padding = 2,
-    max_width = 0,
-    max_height = 0,
+    padding = 10,
+    max_width = 200,
+    max_height = 200,
     border = "rounded",
     win_options = {
       winblend = 0,
     },
+
+    close_on_select = true,
     -- optionally override the oil buffers window title with custom function: fun(winid: integer): string
     get_win_title = nil,
     -- preview_split: Split direction: "auto", "left", "right", "above", "below".
