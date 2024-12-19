@@ -147,9 +147,6 @@ in with vimPlugins; [
   hop-nvim
   neoscroll-nvim
 
-  # File Browser
-  nvim-tree-lua
-
   # Editor Configuration
   editorconfig-nvim
 
@@ -183,7 +180,6 @@ in with vimPlugins; [
   which-key-nvim
 
   oil-nvim
-
 
   # Markdown
   markdown-preview-nvim

@@ -87,7 +87,6 @@ in mkLuaConfigs [
   ./todo-comments.lua
   ./toggleterm.lua
   ./tree-sitter.lua
-  ./tree.lua
   ./trouble.lua
   ./twilight.lua
   ./vim.lua
