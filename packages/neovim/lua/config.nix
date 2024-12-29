@@ -1,5 +1,5 @@
-{ lib, substituteAll, symlinkJoin, nodePackages, prisma-engines, makeWrapper
-, runCommand, ... }:
+{ lib, substituteAll, symlinkJoin, nodePackages, marksman, prisma-engines, ...
+}:
 
 with lib;
 let
@@ -78,6 +78,7 @@ in mkLuaConfigs [
       volar = "${nodePackages.volar}/bin/vue-language-server";
       svelte = "${nodePackages.svelte-language-server}/bin/svelteserver";
       pyright = "${nodePackages.pyright}/bin/pyright";
+      marksman = "${marksman}/bin/${marksman.pname}";
     };
   }
   ./lualine.lua

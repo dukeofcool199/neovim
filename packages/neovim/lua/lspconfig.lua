@@ -209,6 +209,12 @@ lsp.tailwindcss.setup {
   filetypes = { "templ", "astro", "javascript", "typescript", "react", "html", "typescriptreact", "vue", "svelte" },
   init_options = { userLanguages = { templ = "html" } },
 }
+lsp.marksman.setup {
+  on_attach = my_on_attach,
+  cmd = { "@marksman@", "server" },
+  capabilities = capabilities,
+  filetypes = { "markdown" },
+}
 
 -- Lua
 lsp.lua_ls.setup {
