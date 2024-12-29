@@ -161,10 +161,9 @@ lsp.volar.setup {
 }
 
 lsp.svelte.setup {
-  cmd = { '@svelte@', "--stdio" },
+  cmd = { 'npx', 'svelteserver', '--stdio' },
   root_dir = util.root_pattern("svelte.config.js"),
-  filetypes =
-  { 'svelte' },
+  filetypes = { 'svelte' },
 }
 -- JSON
 lsp.jsonls.setup {
