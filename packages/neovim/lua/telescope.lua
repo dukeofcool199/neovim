@@ -2,9 +2,6 @@ local which_key = require("which-key")
 local telescope = require("telescope")
 local api = require("telescope.builtin")
 
--- Import manix so that Telescope can load it properly.
----@diagnostic disable-next-line: unused-local
-local manix = require("telescope-manix")
 
 telescope.setup {
   defaults = {
@@ -15,8 +12,6 @@ telescope.setup {
     },
   },
 }
-
-telescope.load_extension("manix")
 
 which_key.register({
   f = {
@@ -32,7 +27,6 @@ which_key.register({
       api.live_grep { hidden = true }
     end, "Grep (Hidden Files)" },
     b = { "<cmd>Telescope buffers<cr>", "Find Buffer" },
-    n = { "<cmd>Telescope manix<cr>", "Nix Documentation" },
   },
   p = {
     p = { "<cmd>Telescope find_files<cr>", "Find File" }

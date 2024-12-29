@@ -43,15 +43,12 @@ let
   #   '';
 in mkLuaConfigs [
   ./bufferline.lua
-  ./scope.lua
   ./cmp.lua
   ./fzf.lua
   ./git.lua
   ./neogen.lua
   ./gitsigns.lua
   ./hop.lua
-  ./copilot.lua
-  ./icon-picker.lua
   ./keys.lua
   {
     file = ./lspconfig.lua;
@@ -75,16 +72,13 @@ in mkLuaConfigs [
         "${nodePackages.tailwindcss-language-server}/bin/tailwindcss-language-server";
       astroLanguageServer =
         "${nodePackages.astrojs-language-server}/bin/astro-ls";
-      volar = "${nodePackages.volar}/bin/vue-language-server";
       svelte = "${nodePackages.svelte-language-server}/bin/svelteserver";
-      pyright = "${nodePackages.pyright}/bin/pyright";
       marksman = "${marksman}/bin/${marksman.pname}";
     };
   }
   ./lualine.lua
   ./theme.lua
   ./telescope.lua
-  ./tmux-navigator.lua
   ./todo-comments.lua
   ./toggleterm.lua
   ./tree-sitter.lua
@@ -93,13 +87,11 @@ in mkLuaConfigs [
   ./vim.lua
   ./bookmarks.lua
   ./indent.lua
-  ./context.lua
   ./which-key.lua
   ./tabs.lua
   ./wrap-toggle.lua
   ./quit.lua
   ./zen.lua
-  ./plantuml.lua
   ./oil.lua
 ]
 

@@ -131,7 +131,7 @@ lsp.nixd.setup {
 }
 
 -- TypeScript
-lsp.tsserver.setup {
+lsp.ts_ls.setup {
   on_attach = my_on_attach,
   cmd = { "@typescriptLanguageServer@", "--stdio" },
   capabilities = capabilities,
@@ -283,44 +283,43 @@ null_ls.setup {
   end
 }
 
-local prettier = require("prettier")
 
-prettier.setup {
-  bin = "prettier",
-  filetypes = {
-    "astro",
-    "css",
-    "graphql",
-    "html",
-    "javascript",
-    "javascriptreact",
-    "json",
-    "less",
-    "markdown",
-    "scss",
-    "typescript",
-    "typescriptreact",
-    "vue",
-    "svelte",
-    "yaml",
-  },
-  cli_options = {
-    -- Default to *only* config given in a project, unless none exists.
-    config_precedence = "prefer-file",
-    -- Prettier config if no project specific configuration is found.
-    use_tabs = true,
-    print_width = 120,
-  },
-  ["null-ls"] = {
-    condition = function()
-      return true
-      -- return prettier.config_exists({
-      -- 	check_package_json = false,
-      -- })
-    end,
-    timeout = 5000,
-  }
-}
+-- prettier.setup {
+--   bin = "prettier",
+--   filetypes = {
+--     "astro",
+--     "css",
+--     "graphql",
+--     "html",
+--     "javascript",
+--     "javascriptreact",
+--     "json",
+--     "less",
+--     "markdown",
+--     "scss",
+--     "typescript",
+--     "typescriptreact",
+--     "vue",
+--     "svelte",
+--     "yaml",
+--   },
+--   cli_options = {
+--     -- Default to *only* config given in a project, unless none exists.
+--     config_precedence = "prefer-file",
+--     -- Prettier config if no project specific configuration is found.
+--     use_tabs = true,
+--     print_width = 120,
+--   },
+--   ["null-ls"] = {
+--     condition = function()
+--       return true
+--       -- return prettier.config_exists({
+--       -- 	check_package_json = false,
+--       -- })
+--     end,
+--     timeout = 5000,
+--   }
+-- }
 
 -- Publish diagnostics from the language servers.
 vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(vim.lsp.diagnostic.on_publish_diagnostics, {
