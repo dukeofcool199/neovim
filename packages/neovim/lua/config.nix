@@ -1,5 +1,5 @@
-{ lib, substituteAll, symlinkJoin, nodePackages, marksman, prisma-engines, ...
-}:
+{ lib, substituteAll, symlinkJoin, vue-language-server
+, typescript-language-server, nodePackages, marksman, prisma-engines, ... }:
 
 with lib;
 let
@@ -54,8 +54,11 @@ in mkLuaConfigs [
     file = ./lspconfig.lua;
     options = {
       typescript = "${nodePackages.typescript}/lib/node_modules/typescript";
+      vueTypescriptPlugin =
+        "${nodePackages.vue-typescript-plugin}/lib/node_modules/@vue/typescript-plugin";
       typescriptLanguageServer =
-        "${nodePackages.typescript-language-server}/bin/typescript-language-server";
+        "${typescript-language-server}/bin/typescript-language-server";
+      volar = "${vue-language-server}/bin/vue-language-server";
       # eslintLanguageServer = "${wrappedESLintLanguageServer}/bin/vscode-eslint-language-server";
       htmlLanguageServer =
         "${nodePackages.vscode-langservers-extracted}/bin/vscode-html-language-server";
@@ -65,9 +68,6 @@ in mkLuaConfigs [
         "${nodePackages.vscode-langservers-extracted}/bin/vscode-json-language-server";
       dockerLanguageServer =
         "${nodePackages.dockerfile-language-server-nodejs}/bin/docker-langserver";
-      prismaLanguageServer =
-        "${nodePackages.prisma-language-server}/lib/node_modules/@prisma/language-server/dist/src/bin.js";
-      prismaFormat = "${prisma-engines}/bin/prisma-fmt";
       tailwindLanguageServer =
         "${nodePackages.tailwindcss-language-server}/bin/tailwindcss-language-server";
       astroLanguageServer =

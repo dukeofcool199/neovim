@@ -7,19 +7,12 @@ let
     pkgs = prev;
     nodejs = prev.nodejs-18_x;
   };
-  prisma-language-server = node-packages."@prisma/language-server".override {
-    dontNpmInstall = true;
-    postInstall = ''
-      file="$out/lib/node_modules/@prisma/language-server/dist/src/bin.js"
-
-      chmod +x "$file"
-    '';
-  };
   tailwindcss-language-server = node-packages."@tailwindcss/language-server";
   astrojs-language-server = node-packages."@astrojs/language-server";
-in
-{
+  vue-typescript-plugin = node-packages."@vue/typescript-plugin";
+in {
   nodePackages = prev.nodePackages // {
-    inherit prisma-language-server tailwindcss-language-server astrojs-language-server;
+    inherit tailwindcss-language-server vue-typescript-plugin
+      astrojs-language-server;
   };
 }

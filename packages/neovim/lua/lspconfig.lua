@@ -26,7 +26,7 @@ require("neodev").setup {
 -- after the language server attaches to the current buffer.
 local my_on_attach = function(client, buffer)
   -- Disable formatting from duplicate providers
-  if client.name == "tsserver"
+  if client.name == "ts_ls"
       or client.name == "html"
       or client.name == "cssls"
       or client.name == "jsonls"
@@ -81,7 +81,7 @@ local my_on_attach = function(client, buffer)
     }
   }, { buffer = buffer, mode = "n", prefix = "<leader>", noremap = true, silent = true })
 
-  if client.name == "tsserver" then
+  if client.name == "ts_ls" then
     which_key.register({
       c = {
         name = "Code",
@@ -130,16 +130,24 @@ lsp.nixd.setup {
 
 }
 
--- TypeScript
 lsp.ts_ls.setup {
   on_attach = my_on_attach,
+  init_options = {
+    plugins = {
+      {
+        name = "@vue/typescript-plugin",
+        location = "@vueTypescriptPlugin@",
+        languages = { "vue" }
+      }
+    }
+  },
   cmd = { "@typescriptLanguageServer@", "--stdio" },
   capabilities = capabilities,
   commands = {
     OrganizeImports = {
       function()
         vim.lsp.buf.execute_command {
-          title = "",
+          title = "Organize Imports",
           command = "_typescript.organizeImports",
           arguments = { vim.api.nvim_buf_get_name(0) },
         }
@@ -147,18 +155,21 @@ lsp.ts_ls.setup {
       description = "Organize Imports",
     },
   },
+  filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', "vue" }
 }
 
 lsp.volar.setup {
-  cmd = { '@volar@', "--stdio" },
-  init_options = {
-    typescript = {
-      tsdk = '@typescript@/lib'
-    }
-  },
-  filetypes =
-  { 'vue' },
+  -- on_attach = my_on_attach,
+  -- filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', "vue" },
+  cmd = { "@volar@", "--stdio" },
+  -- init_options = {
+  --   typescript = { tsdk = "@typescript@/lib", },
+  --   vue = {
+  --     hybridMode = false
+  --   }
+  -- }
 }
+
 
 lsp.svelte.setup {
   cmd = { 'npx', 'svelteserver', '--stdio' },
