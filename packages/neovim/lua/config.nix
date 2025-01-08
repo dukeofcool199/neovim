@@ -1,5 +1,5 @@
-{ lib, substituteAll, symlinkJoin, vue-language-server
-, typescript-language-server, nodePackages, marksman, prisma-engines, ... }:
+{ lib, substituteAll, symlinkJoin, vue-language-server, emmet-language-server
+, typescript-language-server, nodePackages, marksman, ... }:
 
 with lib;
 let
@@ -74,6 +74,8 @@ in mkLuaConfigs [
         "${nodePackages.astrojs-language-server}/bin/astro-ls";
       svelte = "${nodePackages.svelte-language-server}/bin/svelteserver";
       marksman = "${marksman}/bin/${marksman.pname}";
+      emmetLanguageServer =
+        "${emmet-language-server}/bin/${emmet-language-server.pname}";
     };
   }
   ./lualine.lua

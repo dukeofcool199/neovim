@@ -119,6 +119,12 @@ for _, name in pairs(servers) do
   }
 end
 
+lsp.emmet_language_server.setup({
+  filetypes = { "css", "vue", "eruby", "html", "javascript", "javascriptreact", "less", "sass", "scss", "pug", "typescriptreact" },
+  -- Read more about this options in the [vscode docs](https://code.visualstudio.com/docs/editor/emmet#_emmet-configuration).
+  -- **Note:** only the options listed in the table are supported.
+  cmd = { "@emmetLanguageServer@", "--stdio" },
+})
 
 
 lsp.nixd.setup {
@@ -295,42 +301,42 @@ null_ls.setup {
 }
 
 
--- prettier.setup {
---   bin = "prettier",
---   filetypes = {
---     "astro",
---     "css",
---     "graphql",
---     "html",
---     "javascript",
---     "javascriptreact",
---     "json",
---     "less",
---     "markdown",
---     "scss",
---     "typescript",
---     "typescriptreact",
---     "vue",
---     "svelte",
---     "yaml",
---   },
---   cli_options = {
---     -- Default to *only* config given in a project, unless none exists.
---     config_precedence = "prefer-file",
---     -- Prettier config if no project specific configuration is found.
---     use_tabs = true,
---     print_width = 120,
---   },
---   ["null-ls"] = {
---     condition = function()
---       return true
---       -- return prettier.config_exists({
---       -- 	check_package_json = false,
---       -- })
---     end,
---     timeout = 5000,
---   }
--- }
+
+require("prettier").setup {
+  bin = "prettier",
+  filetypes = {
+    "astro",
+    "css",
+    "graphql",
+    "html",
+    "javascript",
+    "javascriptreact",
+    "json",
+    "less",
+    "scss",
+    "typescript",
+    "typescriptreact",
+    "vue",
+    "svelte",
+    "yaml",
+  },
+  cli_options = {
+    -- Default to *only* config given in a project, unless none exists.
+    config_precedence = "prefer-file",
+    -- Prettier config if no project specific configuration is found.
+    use_tabs = true,
+    print_width = 120,
+  },
+  ["null-ls"] = {
+    condition = function()
+      return true
+      -- return prettier.config_exists({
+      -- 	check_package_json = false,
+      -- })
+    end,
+    timeout = 5000,
+  }
+}
 
 -- Publish diagnostics from the language servers.
 vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(vim.lsp.diagnostic.on_publish_diagnostics, {

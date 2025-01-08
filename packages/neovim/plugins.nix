@@ -1,6 +1,18 @@
 { lib, pkgs, vimPlugins, fetchFromGitHub, tree-sitter, callPackage, ... }:
 
-with vimPlugins; [
+let
+  prettier-nvim = pkgs.vimUtils.buildVimPlugin {
+    name = "prettier.nvim";
+    src = pkgs.fetchFromGitHub {
+      owner = "MunifTanjim";
+      repo = "prettier.nvim";
+      rev = "main";
+      sha256 = "sha256-4xq+caprcQQotvBXnWWSsMwVB2hc5uyjrhT1dPBffXI=";
+    };
+    doCheck = false;
+  };
+
+in with vimPlugins; [
   # Icons
   nvim-web-devicons
 
@@ -15,6 +27,8 @@ with vimPlugins; [
   neodev-nvim
   dressing-nvim
 
+  prettier-nvim
+
   # Telescope
   telescope-nvim
   telescope-symbols-nvim
@@ -27,7 +41,6 @@ with vimPlugins; [
   nvim-jdtls
   trouble-nvim
   neoformat
-  emmet-vim
 
   # Autocomplete
   nvim-cmp
