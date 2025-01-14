@@ -26,14 +26,12 @@ require("neodev").setup {
 -- after the language server attaches to the current buffer.
 local my_on_attach = function(client, buffer)
   -- Disable formatting from duplicate providers
-  if client.name == "ts_ls"
-      or client.name == "html"
-      or client.name == "cssls"
-      or client.name == "jsonls"
-  then
-    client.server_capabilities.documentFormattingProvider = false
-    client.server_capabilities.documentRangeFormattingProvider = false
-  end
+  -- if client.name == "ts_ls"
+  --     or client.name == "html"
+  --     or client.name == "cssls"
+  --     or client.name == "jsonls"
+  -- then
+  -- end
 
   if client.server_capabilities.documentSymbolProvider then
     navic.attach(client, buffer)
@@ -112,9 +110,9 @@ local servers = {
 }
 
 
+
 for _, name in pairs(servers) do
   lsp[name].setup {
-    on_attach = my_on_attach,
     capabilities = capabilities,
   }
 end
@@ -137,7 +135,9 @@ lsp.nixd.setup {
 }
 
 lsp.ts_ls.setup {
-  on_attach = my_on_attach,
+  on_attach = function(client)
+    client.server_capabilities.documentFormattingProvider = false
+  end,
   init_options = {
     plugins = {
       {
@@ -163,6 +163,13 @@ lsp.ts_ls.setup {
   },
   filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', "vue" }
 }
+null_ls.setup({
+  sources = {
+    null_ls.builtins.formatting.prettier.with({
+      filetypes = { "javascript", "typescript", "typescriptreact", "javascriptreact", "html", "css", "json", "yaml" }, -- Adjust as needed
+    }),
+  },
+})
 
 lsp.volar.setup {
   -- on_attach = my_on_attach,
@@ -269,74 +276,6 @@ lsp.astro.setup {
   },
 }
 
--- Prettier
-local function is_null_ls_formatting_enabed(bufnr)
-  local file_type = vim.api.nvim_buf_get_option(bufnr, "filetype")
-  local generators = require("null-ls.generators").get_available(
-    file_type,
-    require("null-ls.methods").internal.FORMATTING
-  )
-  return #generators > 0
-end
-
-null_ls.setup {
-  ---@diagnostic disable-next-line: unused-local
-  on_attach = function(client, bufnr)
-    if client.server_capabilities.documentFormattingProvider then
-      if client.name == "null-ls" and is_null_ls_formatting_enabed(bufnr)
-          or client.name ~= "null-ls"
-      then
-        vim.api.nvim_buf_set_option(bufnr, "formatexpr", "v:lua.vim.lsp.formatexpr()")
-      else
-        vim.api.nvim_buf_set_option(bufnr, "formatexpr", "")
-      end
-
-      -- vim.cmd("autocmd BufWritePost <buffer> lua vim.lsp.buf.format({async = true})")
-    end
-
-    -- if client.server_capabilities.documentRangeFormattingProvider then
-    -- 	vim.cmd("autocmd BufWritePost <buffer> lua vim.lsp.formatexpr()")
-    -- end
-  end
-}
-
-
-
-require("prettier").setup {
-  bin = "prettier",
-  filetypes = {
-    "astro",
-    "css",
-    "graphql",
-    "html",
-    "javascript",
-    "javascriptreact",
-    "json",
-    "less",
-    "scss",
-    "typescript",
-    "typescriptreact",
-    "vue",
-    "svelte",
-    "yaml",
-  },
-  cli_options = {
-    -- Default to *only* config given in a project, unless none exists.
-    config_precedence = "prefer-file",
-    -- Prettier config if no project specific configuration is found.
-    use_tabs = true,
-    print_width = 120,
-  },
-  ["null-ls"] = {
-    condition = function()
-      return true
-      -- return prettier.config_exists({
-      -- 	check_package_json = false,
-      -- })
-    end,
-    timeout = 5000,
-  }
-}
 
 -- Publish diagnostics from the language servers.
 vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(vim.lsp.diagnostic.on_publish_diagnostics, {
