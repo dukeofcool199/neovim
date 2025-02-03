@@ -163,10 +163,15 @@ lsp.ts_ls.setup {
   },
   filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', "vue" }
 }
+
+require('prettier').setup({
+  bin = 'prettier', -- or `'prettierd'` (v0.23.3+)
+})
+
 null_ls.setup({
   sources = {
     null_ls.builtins.formatting.prettier.with({
-      filetypes = { "javascript", "typescript", "typescriptreact", "javascriptreact", "html", "css", "json", "yaml" }, -- Adjust as needed
+      filetypes = { "javascript", "vue", "typescript", "typescriptreact", "javascriptreact", "html", "css", "json", "yaml" }, -- Adjust as needed
     }),
   },
 })
