@@ -179,6 +179,9 @@ null_ls.setup({
 lsp.volar.setup {
   -- on_attach = my_on_attach,
   -- filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', "vue" },
+  on_attach = function(client, _)
+    client.server_capabilities.documentFormattingProvider = false
+  end,
   cmd = { "@volar@", "--stdio" },
   -- init_options = {
   --   typescript = { tsdk = "@typescript@/lib", },
