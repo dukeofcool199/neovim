@@ -106,7 +106,7 @@ local servers = {
   'rust_analyzer',
   'ocamllsp',
   'gleam',
-  'zls'
+  'zls',
 }
 
 
@@ -134,6 +134,11 @@ lsp.nixd.setup {
 
 }
 
+lsp.sqls.setup {
+  on_attach = function(client)
+    client.server_capabilities.documentFormattingProvider = false
+  end,
+}
 lsp.ts_ls.setup {
   on_attach = function(client)
     client.server_capabilities.documentFormattingProvider = false
