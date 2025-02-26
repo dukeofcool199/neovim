@@ -106,7 +106,6 @@ local servers = {
   'rust_analyzer',
   'ocamllsp',
   'gleam',
-  'zls',
 }
 
 
@@ -116,6 +115,12 @@ for _, name in pairs(servers) do
     capabilities = capabilities,
   }
 end
+
+lsp.zls.setup({
+  on_attach = function(client)
+    client.server_capabilities.documentFormattingProvider = false
+  end,
+})
 
 lsp.emmet_language_server.setup({
   filetypes = { "css", "vue", "eruby", "html", "javascript", "javascriptreact", "less", "sass", "scss", "pug", "typescriptreact" },
@@ -243,7 +248,7 @@ lsp.tailwindcss.setup {
   on_attach = my_on_attach,
   cmd = { "@tailwindLanguageServer@", "--stdio" },
   capabilities = capabilities,
-  filetypes = { "templ", "astro", "javascript", "typescript", "react", "html", "typescriptreact", "vue", "svelte" },
+  filetypes = { "templ", "astro", "javascript", "typescript", "react", "html", "typescriptreact", "vue", "svelte", "haskell" },
   init_options = { userLanguages = { templ = "html" } },
 }
 lsp.marksman.setup {
