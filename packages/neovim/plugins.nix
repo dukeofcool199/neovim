@@ -11,6 +11,19 @@ let
     };
     doCheck = false;
   };
+  prr = pkgs.vimUtils.buildVimPlugin {
+    name = "prr";
+    src = fetchFromGitHub {
+      owner = "danobi";
+      repo = "prr";
+      rev = "master";
+      sha256 = "sha256-duoC3TMgW+h5OrRCbqYPppMtnQBfS9R7ZpHQySgPRv4=";
+    };
+    postPatch = ''
+      mv vim/* .  # Move the vim directory's contents to the root
+      rmdir vim
+    '';
+  };
 
 in with vimPlugins; [
   # Icons
@@ -67,6 +80,8 @@ in with vimPlugins; [
 
   # Editor Configuration
   editorconfig-nvim
+
+  prr
 
   # Highlighting & View Augmentation
   # vim-illuminate
