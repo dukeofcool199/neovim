@@ -29,6 +29,8 @@ in with vimPlugins; [
   # Icons
   nvim-web-devicons
 
+  firenvim
+
   # Syntax
   vim-nix
   nvim-treesitter.withAllGrammars
