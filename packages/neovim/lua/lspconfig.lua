@@ -100,7 +100,6 @@ local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
 -- Configure servers with common settings.
 local servers = {
-  'gopls',
   'pyright',
   'templ',
   'rust_analyzer',
@@ -110,12 +109,15 @@ local servers = {
 
 
 
+
 for _, name in pairs(servers) do
   lsp[name].setup {
     capabilities = capabilities,
   }
 end
 
+
+lsp.gopls.setup({})
 lsp.zls.setup({
   on_attach = function(client)
     client.server_capabilities.documentFormattingProvider = false
