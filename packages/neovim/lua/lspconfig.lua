@@ -113,6 +113,7 @@ local servers = {
 for _, name in pairs(servers) do
   lsp[name].setup {
     capabilities = capabilities,
+    on_attach = my_on_attach
   }
 end
 
