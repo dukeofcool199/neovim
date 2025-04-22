@@ -106,6 +106,7 @@ local servers = {
   'rust_analyzer',
   'ocamllsp',
   'gleam',
+  'nixd'
 }
 
 
@@ -131,14 +132,14 @@ lsp.emmet_language_server.setup({
 })
 
 
-lsp.nixd.setup {
+-- lsp.nixd.setup {
 
-  -- formatting = {
-  --   formatCommand = "alejandra",
-  --   formatStdin = true,
-  -- },
+-- formatting = {
+--   formatCommand = "alejandra",
+--   formatStdin = true,
+-- },
 
-}
+-- }
 
 lsp.sqls.setup {
   on_attach = function(client)
