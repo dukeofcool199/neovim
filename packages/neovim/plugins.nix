@@ -133,6 +133,7 @@ in with vimPlugins; [
   # Bookmarks
   vim-bookmarks
   telescope-vim-bookmarks-nvim
+  obsidian-nvim
 
   # Line Indentation
   indent-blankline-nvim
