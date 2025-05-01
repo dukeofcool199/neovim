@@ -173,7 +173,7 @@ lsp.ts_ls.setup {
       description = "Organize Imports",
     },
   },
-  filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', "vue" }
+  filetypes = { 'typescript', 'html', 'javascript', 'javascriptreact', 'typescriptreact', "vue" }
 }
 
 require('prettier').setup({
