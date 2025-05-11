@@ -125,7 +125,7 @@ lsp.zls.setup({
 })
 
 lsp.emmet_language_server.setup({
-  filetypes = { "css", "vue", "eruby", "html", "javascript", "javascriptreact", "less", "sass", "scss", "pug", "typescriptreact" },
+  filetypes = { "css", "vue", "eruby", "html", "markdown", "javascript", "javascriptreact", "less", "sass", "scss", "pug", "typescriptreact" },
   -- Read more about this options in the [vscode docs](https://code.visualstudio.com/docs/editor/emmet#_emmet-configuration).
   -- **Note:** only the options listed in the table are supported.
   cmd = { "@emmetLanguageServer@", "--stdio" },
@@ -221,7 +221,7 @@ lsp.html.setup {
   on_attach = my_on_attach,
   cmd = { "@htmlLanguageServer@", "--stdio" },
   capabilities = capabilities,
-  filetypes = { "html", "templ" },
+  filetypes = { "html", "templ", "markdown" },
 }
 
 -- use the haskell language server specific to the project
