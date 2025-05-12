@@ -139,7 +139,9 @@ lsp.emmet_language_server.setup({
 --   formatStdin = true,
 -- },
 
--- }
+lsp.openscad_lsp.setup {
+  on_attach = my_on_attach,
+}
 
 lsp.sqls.setup {
   on_attach = function(client)
