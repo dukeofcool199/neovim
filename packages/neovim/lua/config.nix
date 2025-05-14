@@ -90,6 +90,7 @@ in mkLuaConfigs [
   ./bookmarks.lua
   ./indent.lua
   ./which-key.lua
+  ./harpoon.lua
   ./tabs.lua
   ./wrap-toggle.lua
   ./quit.lua

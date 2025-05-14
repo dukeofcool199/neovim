@@ -85,6 +85,8 @@ in with vimPlugins; [
 
   prr
 
+  harpoon2
+
   # Highlighting & View Augmentation
   # vim-illuminate
   todo-comments-nvim
