@@ -106,6 +106,7 @@ local servers = {
   'rust_analyzer',
   'ocamllsp',
   'gleam',
+  'ols',
   'nixd'
 }
 
@@ -119,10 +120,13 @@ for _, name in pairs(servers) do
 end
 
 lsp.zls.setup({
-  on_attach = function(client)
+
+  on_attach = function(client, buffer)
     client.server_capabilities.documentFormattingProvider = false
+    my_on_attach(client, buffer)
   end,
 })
+
 
 lsp.emmet_language_server.setup({
   filetypes = { "css", "vue", "eruby", "html", "markdown", "javascript", "javascriptreact", "less", "sass", "scss", "pug", "typescriptreact" },
