@@ -92,6 +92,7 @@ in mkLuaConfigs [
   ./which-key.lua
   ./harpoon.lua
   ./tabs.lua
+  ./multicursor.lua
   ./wrap-toggle.lua
   ./quit.lua
   ./zen.lua

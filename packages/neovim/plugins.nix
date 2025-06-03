@@ -42,6 +42,8 @@ in with vimPlugins; [
   neodev-nvim
   dressing-nvim
 
+  multicursors-nvim
+
   prettier-nvim
 
   # Telescope
