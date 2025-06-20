@@ -11,6 +11,32 @@ let
     };
     doCheck = false;
   };
+
+  strudel = pkgs.vimUtils.buildVimPlugin {
+    name = "strudel.nvim";
+    version = "main";
+
+    src = pkgs.buildNpmPackage {
+      name = "strudel.nvim";
+      PUPPETEER_SKIP_DOWNLOAD = true;
+      src = pkgs.fetchFromGitHub {
+        owner = "gruvw";
+        repo = "strudel.nvim";
+        rev = "main";
+        hash = "sha256-2dic+AfSRDt5MwSciLy4qfF1HhmUjHFbaAoWxLDUMMU=";
+      };
+      buildPhase = "echo 'nuttin'";
+      npmDepsHash = "sha256-ms4yE/ex7CCxSRWxSfILdJgwT4xl0mbWTq/VVBAgGRs=";
+      buildInputs = [ pkgs.sedutil ];
+      postPatch = ''
+        sed -i '191a\
+                  executablePath: "${pkgs.chromium}/bin/chromium",' ./js/launch.js
+      '';
+      installPhase = "mkdir $out; cp -r ./* $out";
+    };
+    doCheck = false;
+  };
+
   prr = pkgs.vimUtils.buildVimPlugin {
     name = "prr";
     src = fetchFromGitHub {
@@ -62,6 +88,8 @@ in with vimPlugins; [
   # Autocomplete
   nvim-cmp
   cmp-nvim-lsp
+
+  strudel
 
   # Snippets
   luasnip

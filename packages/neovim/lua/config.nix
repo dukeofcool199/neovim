@@ -94,6 +94,7 @@ in mkLuaConfigs [
   ./tabs.lua
   ./multicursor.lua
   ./wrap-toggle.lua
+  ./strudel.lua
   ./quit.lua
   ./zen.lua
   ./oil.lua
