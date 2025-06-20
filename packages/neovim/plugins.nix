@@ -12,6 +12,17 @@ let
     doCheck = false;
   };
 
+  spongebob = pkgs.vimUtils.buildVimPlugin {
+    name = "sPoNGe-BoB.NvIm";
+    src = pkgs.fetchFromGitHub {
+      owner = "tjdevries";
+      repo = "sPoNGe-BoB.NvIm";
+      rev = "master";
+      sha256 = "sha256-xR0JOsU4GYrYdpVzEFdnL5RmPu+GnxtDsTnc+jk54P4=";
+    };
+    doCheck = false;
+  };
+
   strudel = pkgs.vimUtils.buildVimPlugin {
     name = "strudel.nvim";
     version = "main";
@@ -71,6 +82,8 @@ in with vimPlugins; [
   multicursors-nvim
 
   prettier-nvim
+
+  spongebob
 
   # Telescope
   telescope-nvim
