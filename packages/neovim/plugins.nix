@@ -33,8 +33,8 @@ let
       src = pkgs.fetchFromGitHub {
         owner = "gruvw";
         repo = "strudel.nvim";
-        rev = "main";
-        hash = "sha256-2dic+AfSRDt5MwSciLy4qfF1HhmUjHFbaAoWxLDUMMU=";
+        rev = "9ad3634c7c302f16db889a55c2ff13e66f56ded2";
+        hash = "sha256-SSD76hTVKZmCBT5sfji/fC8MExO2sZBumHM+rPIF4vQ=";
       };
       buildPhase = "echo 'nuttin'";
       npmDepsHash = "sha256-ms4yE/ex7CCxSRWxSfILdJgwT4xl0mbWTq/VVBAgGRs=";
