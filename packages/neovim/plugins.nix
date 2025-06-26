@@ -27,7 +27,7 @@ let
     name = "strudel.nvim";
     version = "main";
 
-    src = pkgs.buildNpmPackage {
+    src = pkgs.buildNpmPackage rec {
       name = "strudel.nvim";
       PUPPETEER_SKIP_DOWNLOAD = true;
       src = pkgs.fetchFromGitHub {
@@ -37,10 +37,11 @@ let
         hash = "sha256-SSD76hTVKZmCBT5sfji/fC8MExO2sZBumHM+rPIF4vQ=";
       };
       buildPhase = "echo 'nuttin'";
-      npmDepsHash = "sha256-ms4yE/ex7CCxSRWxSfILdJgwT4xl0mbWTq/VVBAgGRs=";
+      npmDeps = pkgs.importNpmLock { npmRoot = src; };
+      npmConfigHook = pkgs.importNpmLock.npmConfigHook;
       buildInputs = [ pkgs.sedutil ];
       postPatch = ''
-        sed -i '191a\
+        sed -i '286a\
                   executablePath: "${pkgs.chromium}/bin/chromium",' ./js/launch.js
       '';
       installPhase = "mkdir $out; cp -r ./* $out";
