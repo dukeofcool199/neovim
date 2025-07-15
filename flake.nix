@@ -20,7 +20,7 @@
 
       channels-config.allowUnfree = true;
 
-      package-namespace = "jenkvim";
+      package-namespace = "neovim";
 
       alias.packages.default = "neovim";
     };
