@@ -86,6 +86,8 @@ in with vimPlugins; [
 
   spongebob
 
+  flutter-tools-nvim
+
   # Telescope
   telescope-nvim
   telescope-symbols-nvim
