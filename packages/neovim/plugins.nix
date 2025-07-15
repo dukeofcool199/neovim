@@ -119,6 +119,8 @@ in with vimPlugins; [
   vim-surround
   vim-commentary
 
+  haskell-tools-nvim
+
   # writing
   vim-pencil
 
