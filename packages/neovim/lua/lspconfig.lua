@@ -232,21 +232,11 @@ lsp.html.setup {
 }
 
 -- use the haskell language server specific to the project
--- lsp.hls.setup {
---   on_attach = my_on_attach,
---   filetypes = { 'haskell', 'lhaskell', 'cabal' },
---   capabilities = capabilities,
---   settings = {
---     haskell = {
---       formattingProvider = "ormolu", -- optional
---       plugin = {
---         eval = {
---           globalOn = true
---         }
---       }
---     }
---   }
--- }
+lsp.hls.setup {
+  on_attach = my_on_attach,
+  filetypes = { 'haskell', 'lhaskell', 'cabal' },
+  capabilities = capabilities,
+}
 
 -- CSS
 lsp.cssls.setup {
