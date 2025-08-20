@@ -130,7 +130,7 @@ lsp.zls.setup({
 
 
 lsp.emmet_language_server.setup({
-  filetypes = { "css", "vue", "eruby", "html", "markdown", "javascript", "javascriptreact", "less", "sass", "scss", "pug", "typescriptreact" },
+  filetypes = { "css", "vue", "eruby", "templ", "html", "markdown", "javascript", "javascriptreact", "less", "sass", "scss", "pug", "typescriptreact" },
   -- Read more about this options in the [vscode docs](https://code.visualstudio.com/docs/editor/emmet#_emmet-configuration).
   -- **Note:** only the options listed in the table are supported.
   cmd = { "@emmetLanguageServer@", "--stdio" },
