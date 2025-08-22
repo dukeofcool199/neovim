@@ -101,7 +101,6 @@ local capabilities = require("cmp_nvim_lsp").default_capabilities()
 -- Configure servers with common settings.
 local servers = {
   'gopls',
-  'dartls',
   'pyright',
   'templ',
   'rust_analyzer',
@@ -119,6 +118,13 @@ for _, name in pairs(servers) do
     on_attach = my_on_attach
   }
 end
+
+
+lsp.dartls.setup({
+  on_attach = function(client, buffer)
+    my_on_attach(client, buffer)
+  end,
+})
 
 lsp.zls.setup({
 
