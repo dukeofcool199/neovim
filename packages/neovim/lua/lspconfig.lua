@@ -245,7 +245,14 @@ lsp.jsonls.setup {
 
 -- HTML
 lsp.html.setup {
-  on_attach = my_on_attach,
+  on_attach = function(client, bufnr)
+    my_on_attach(client, bufnr)
+    local filetype = vim.api.nvim_buf_get_option(bufnr, "filetype")
+    if filetype == "markdown" then
+      client.server_capabilities.documentFormattingProvider = false
+      client.server_capabilities.documentRangeFormattingProvider = false
+    end
+  end,
   cmd = { "@htmlLanguageServer@", "--stdio" },
   capabilities = capabilities,
   filetypes = { "html", "templ", "markdown" },
