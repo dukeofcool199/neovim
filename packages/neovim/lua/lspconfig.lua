@@ -112,6 +112,7 @@ local servers = {
 
 
 
+
 for _, name in pairs(servers) do
   lsp[name].setup {
     capabilities = capabilities,
@@ -119,6 +120,19 @@ for _, name in pairs(servers) do
   }
 end
 
+lsp.rust_analyzer.setup {
+  on_attach = my_on_attach,
+  settings = {
+    ["rust-analyzer"] = {
+      cargo = {
+        allFeatures = true
+      },
+      procMacro = {
+        enable = true
+      }
+    }
+  }
+}
 
 lsp.dartls.setup({
   on_attach = function(client, buffer)
