@@ -107,7 +107,6 @@ local servers = {
   'ocamllsp',
   'gleam',
   'ols',
-  'nixd'
 }
 
 
@@ -157,12 +156,13 @@ lsp.emmet_language_server.setup({
 })
 
 
--- lsp.nixd.setup {
-
--- formatting = {
---   formatCommand = "alejandra",
---   formatStdin = true,
--- },
+lsp.nixd.setup {
+  on_attach = my_on_attach,
+  formatting = {
+    formatCommand = "alejandra",
+    formatStdin = true,
+  }
+}
 
 lsp.openscad_lsp.setup {
   on_attach = my_on_attach,
