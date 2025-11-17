@@ -200,7 +200,7 @@ lsp.ts_ls.setup {
       description = "Organize Imports",
     },
   },
-  filetypes = { 'typescript', 'html', 'javascript', 'javascriptreact', 'typescriptreact', "vue" }
+  filetypes = { 'typescript', 'html', "htmldjango", 'javascript', 'javascriptreact', 'typescriptreact', "vue" }
 }
 
 require('prettier').setup({
@@ -255,7 +255,7 @@ lsp.html.setup {
   end,
   cmd = { "@htmlLanguageServer@", "--stdio" },
   capabilities = capabilities,
-  filetypes = { "html", "templ", "markdown" },
+  filetypes = { "html", "htmldjango", "templ", "markdown" },
 }
 
 -- use the haskell language server specific to the project
