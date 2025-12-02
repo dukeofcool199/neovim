@@ -142,7 +142,7 @@ lsp.dartls.setup({
 lsp.zls.setup({
 
   on_attach = function(client, buffer)
-    client.server_capabilities.documentFormattingProvider = false
+    -- client.server_capabilities.documentFormattingProvider = false
     my_on_attach(client, buffer)
   end,
 })
