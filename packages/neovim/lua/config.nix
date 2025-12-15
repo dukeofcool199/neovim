@@ -98,5 +98,6 @@ in mkLuaConfigs [
   ./quit.lua
   ./zen.lua
   ./oil.lua
+  ./opencode.lua
 ]
 

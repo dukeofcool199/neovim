@@ -11,6 +11,16 @@ let
     };
     doCheck = false;
   };
+  opencode = pkgs.vimUtils.buildVimPlugin {
+    name = "opencode.nvim";
+    src = pkgs.fetchFromGitHub {
+      owner = "NickvanDyke";
+      repo = "opencode.nvim";
+      rev = "main";
+      sha256 = "sha256-+hgiJ6GXOPafdmUuSdwhbyIKILjI5HMJQYtsFtdSp0k=";
+    };
+    doCheck = false;
+  };
 
   spongebob = pkgs.vimUtils.buildVimPlugin {
     name = "sPoNGe-BoB.NvIm";
@@ -196,6 +206,8 @@ in with vimPlugins; [
 
   #ledger
   vim-ledger
+
+  opencode
 
   #svelte
   vim-svelte

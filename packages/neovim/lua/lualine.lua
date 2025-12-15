@@ -78,10 +78,21 @@ require("lualine").setup {
 	sections = {
 		lualine_a = {
 			empty,
-			{ "mode", separator = { left = "", right = "" }, right_padding = 2 },
+			{ "mode", separator = { left = "", right = "" }, right_padding = 2 },
 		},
 		lualine_b = { filename, "branch" },
-		lualine_c = { "fileformat", "diagnostics", "lsp_progress" },
+		lualine_c = { 
+			"fileformat", 
+			"diagnostics", 
+			"lsp_progress",
+			{
+				require("opencode").statusline,
+				cond = function()
+					-- Only show if OpenCode is available
+					return package.loaded["opencode"] ~= nil
+				end,
+			},
+		},
 		lualine_x = {},
 		lualine_y = { "filetype", "progress" },
 		lualine_z = {
