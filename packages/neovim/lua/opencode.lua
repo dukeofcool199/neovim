@@ -7,8 +7,8 @@ vim.o.autoread = true
 vim.g.opencode_opts = {
   provider = {
     enabled = "kitty",
-    terminal = {
-      -- Use Neovim's built-in terminal
+    kitty = {
+      --
     }
   },
   -- Enable useful events

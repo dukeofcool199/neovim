@@ -16,7 +16,7 @@ let
     src = pkgs.fetchFromGitHub {
       owner = "NickvanDyke";
       repo = "opencode.nvim";
-      rev = "main";
+      rev = "aba9e8c64cdb074d3d481e3a0101f6113061bef3";
       sha256 = "sha256-+hgiJ6GXOPafdmUuSdwhbyIKILjI5HMJQYtsFtdSp0k=";
     };
     doCheck = false;
@@ -89,6 +89,8 @@ in with vimPlugins; [
   vim-bufkill
   neodev-nvim
   dressing-nvim
+
+  snacks-nvim
 
   multicursors-nvim
 
