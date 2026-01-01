@@ -35,12 +35,11 @@ local which_key = require('which-key')
 -- OpenCode chord mappings for normal mode (o + key)
 which_key.register({
   -- Primary actions
-  oa = { function() op.ask() end, "Ask OpenCode" },
-  os = { function() op.select() end, "Select action" },
+  oa = { function()
+    op.ask("", { submit = true })
+  end, "Ask OpenCode" },
   op = { function() op.prompt("@this") end, "Prompt with context" },
   ot = { function() op.toggle() end, "Toggle terminal" },
-  oq = { function() op.ask("@this: ", { submit = true }) end, "Quick ask with context" },
-
   -- Context-specific prompts
   ob = { function() op.prompt("@buffer") end, "Current buffer" },
   ov = { function() op.prompt("@visible") end, "Visible text" },
@@ -49,13 +48,13 @@ which_key.register({
   oQ = { function() op.prompt("@quickfix") end, "Quickfix list" },
 
   -- Built-in prompts
-  ["or"] = { function() op.prompt("review") end, "Review code" },
-  oR = { function() op.prompt("fix") end, "Fix diagnostics" },
-  oo = { function() op.prompt("optimize") end, "Optimize code" },
-  oT = { function() op.prompt("test") end, "Add tests" },
-  oe = { function() op.prompt("explain") end, "Explain code" },
-  oD = { function() op.prompt("document") end, "Document code" },
-  oi = { function() op.prompt("implement") end, "Implement code" },
+  ["or"] = { function() op.prompt("review", { submit = true }) end, "Review code" },
+  oR = { function() op.prompt("fix", { submit = true }) end, "Fix diagnostics" },
+  oo = { function() op.prompt("optimizes", { submit = true }) end, "Optimize code" },
+  oT = { function() op.prompt("test", { submit = true }) end, "Add tests" },
+  oe = { function() op.prompt("explains", { submit = true }) end, "Explain code" },
+  oD = { function() op.prompt("documents", { submit = true }) end, "Document code" },
+  oi = { function() op.prompt("implements", { submit = true }) end, "Implement code" },
 
   -- Session management
   on = { function() op.command("session.new") end, "New session" },
@@ -82,22 +81,18 @@ which_key.register({
 -- OpenCode chord mappings for visual mode (o + key)
 which_key.register({
   -- Primary actions with selection
-  oa = { function()
-    op.ask()
-    op.command("prompt.submit")
-  end, "Ask with selection" },
-  os = { function() op.select() end, "Select action" },
+  oa = { function() op.ask("", { submit = true }) end, "Ask with selection" },
   op = { function() op.prompt("@this") end, "Prompt with selection" },
   oq = { function() op.ask("@this: ", { submit = true }) end, "Quick ask with selection" },
 
   -- Quick prompts for selected text
-  ["or"] = { function() op.prompt("review") end, "Review selection" },
-  oe = { function() op.prompt("explain") end, "Explain selection" },
-  oR = { function() op.prompt("fix") end, "Fix selection" },
-  oD = { function() op.prompt("document") end, "Document selection" },
-  oT = { function() op.prompt("test") end, "Test selection" },
-  oo = { function() op.prompt("optimize") end, "Optimize selection" },
-  oi = { function() op.prompt("implement") end, "Implement selection" },
+  ["or"] = { function() op.prompt("review", { submit = true }) end, "Review selection" },
+  oe = { function() op.prompt("explain", { submit = true }) end, "Explain selection" },
+  oR = { function() op.prompt("fix", { submit = true }) end, "Fix selection" },
+  oD = { function() op.prompt("document", { submit = true }) end, "Document selection" },
+  oT = { function() op.prompt("test", { submit = true }) end, "Test selection" },
+  oo = { function() op.prompt("optimize", { submit = true }) end, "Optimize selection" },
+  oi = { function() op.prompt("implement", { submit = true }) end, "Implement selection" },
 }, { mode = "v", prefix = "<leader>" })
 
 -- Auto-handle OpenCode events
