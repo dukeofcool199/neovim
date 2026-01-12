@@ -21,6 +21,15 @@ let
     };
     doCheck = false;
   };
+  gitmoji-telescope = pkgs.vimUtils.buildVimPlugin rec {
+    name = "telescope-gitmoji.nvim";
+    src = pkgs.fetchFromGitHub {
+      owner = "olacin";
+      repo = name;
+      rev = "1f7b5c7c6dfcce236638f82b3c19a7f1ecf77a8f";
+      sha256 = "sha256-8ciPyFdpiLdLmS5LO/IBRMkhezU1WKGpk8w2LMeHdHQ=";
+    };
+  };
 
   spongebob = pkgs.vimUtils.buildVimPlugin {
     name = "sPoNGe-BoB.NvIm";
@@ -193,6 +202,7 @@ in with vimPlugins; [
   # Bookmarks
   vim-bookmarks
   telescope-vim-bookmarks-nvim
+  gitmoji-telescope
   obsidian-nvim
 
   # Line Indentation

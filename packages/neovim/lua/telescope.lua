@@ -16,6 +16,7 @@ telescope.setup {
 which_key.register({
   f = {
     name = "File",
+    e = { telescope.extensions.gitmoji.gitmoji, "Find Gitmojis" },
     f = { "<cmd>Telescope find_files<cr>", "Find File" },
     F = { function()
       api.find_files { hidden = true }
