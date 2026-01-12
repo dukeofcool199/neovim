@@ -35,6 +35,7 @@ local which_key = require('which-key')
 -- OpenCode chord mappings for normal mode (o + key)
 which_key.register({
   -- Primary actions
+  -- a comment
   oa = { function()
     op.ask("", { submit = true })
   end, "Ask OpenCode" },
