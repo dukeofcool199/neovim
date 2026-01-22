@@ -11,6 +11,7 @@
         { __unkeyed-1 = "<leader>f"; group = "File"; }
         { __unkeyed-1 = "<leader>g"; group = "Git"; }
         { __unkeyed-1 = "<leader>h"; group = "Git Hunk"; }
+        { __unkeyed-1 = "<leader>j"; group = "Jujutsu"; }
         { __unkeyed-1 = "<leader>l"; group = "Harpoon List"; }
         { __unkeyed-1 = "<leader>m"; group = "Multi Cursor"; }
         { __unkeyed-1 = "<leader>n"; group = "New"; }

@@ -58,6 +58,17 @@ let
     doCheck = false;
   };
 
+  jj-nvim = pkgs.vimUtils.buildVimPlugin {
+    name = "jj.nvim";
+    src = pkgs.fetchFromGitHub {
+      owner = "NicolasGB";
+      repo = "jj.nvim";
+      rev = "d13a5c9aec08318323f19fcdc1a1d2c469e00739";
+      sha256 = "sha256-8POSGuNYdAR2peyzN92vWR87GqWf+Y6I1arOwNxwd6U=";
+    };
+    doCheck = false;
+  };
+
 in {
   extraPlugins = with pkgs.vimPlugins; [
     # Utility
@@ -69,6 +80,7 @@ in {
     opencode
     gitmoji-telescope
     claudecode
+    jj-nvim
 
     # Telescope extensions
     telescope-symbols-nvim
@@ -142,6 +154,12 @@ in {
     if telescope_ok then
       pcall(telescope.load_extension, "gitmoji")
       pcall(telescope.load_extension, "vim_bookmarks")
+    end
+
+    -- jj.nvim setup (Jujutsu VCS integration)
+    local jj_ok, jj = pcall(require, "jj")
+    if jj_ok then
+      jj.setup({})
     end
   '';
 
@@ -293,6 +311,98 @@ in {
       action = "<cmd>ClaudeCodeSend<cr>";
       options = {
         desc = "Send to Claude";
+        silent = true;
+        noremap = true;
+      };
+    }
+
+    # jj.nvim (Jujutsu) keymaps
+    {
+      mode = "n";
+      key = "<leader>jl";
+      action = "<cmd>J log<cr>";
+      options = {
+        desc = "Log";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>js";
+      action = "<cmd>J status<cr>";
+      options = {
+        desc = "Status";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>jd";
+      action = "<cmd>Jdiff<cr>";
+      options = {
+        desc = "Diff (vertical)";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>jD";
+      action = "<cmd>Jhdiff<cr>";
+      options = {
+        desc = "Diff (horizontal)";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>jn";
+      action = "<cmd>J new<cr>";
+      options = {
+        desc = "New change";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>jc";
+      action = "<cmd>J describe<cr>";
+      options = {
+        desc = "Describe (commit msg)";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>jp";
+      action = "<cmd>J push<cr>";
+      options = {
+        desc = "Push";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>jf";
+      action = "<cmd>J fetch<cr>";
+      options = {
+        desc = "Fetch";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>jo";
+      action = "<cmd>J open_pr<cr>";
+      options = {
+        desc = "Open PR/MR";
         silent = true;
         noremap = true;
       };
