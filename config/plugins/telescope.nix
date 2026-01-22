@@ -42,6 +42,10 @@
         action = "buffers";
         options.desc = "Find Buffer";
       };
+      "<leader>fd" = {
+        action = "git_status";
+        options.desc = "Find Diff Files";
+      };
       "<leader>p" = {
         action = "find_files";
         options.desc = "Find File";
