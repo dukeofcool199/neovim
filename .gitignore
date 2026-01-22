@@ -1,3 +1,5 @@
 result
 packages/neovim/lua/.luarc.json
 .direnv
+.claude
+.claude

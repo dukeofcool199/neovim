@@ -1,27 +1,33 @@
 {
-  description = "Jenkin Schibels Neovim configuration";
+  description = "Jenkin Schibels Neovim configuration - Nixvim";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-    nixd.url = "github:nix-community/nixd";
-
-    snowfall-lib = {
-      url = "github:snowfallorg/lib";
+    nixvim = {
+      url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = inputs:
-    inputs.snowfall-lib.mkFlake {
-      inherit inputs;
-
-      src = ./.;
-
-      channels-config.allowUnfree = true;
-
-      package-namespace = "neovim";
-
-      alias.packages.default = "neovim";
+  outputs = { nixpkgs, nixvim, ... }:
+    let
+      systems =
+        [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      forAllSystems = nixpkgs.lib.genAttrs systems;
+    in {
+      packages = forAllSystems (system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          nixvim' = nixvim.legacyPackages.${system};
+          config = import ./config { inherit pkgs; };
+          nvim = nixvim'.makeNixvimWithModule {
+            inherit pkgs;
+            module = config;
+          };
+        in {
+          default = nvim;
+          neovim = nvim;
+        });
     };
 }
