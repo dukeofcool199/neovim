@@ -47,6 +47,17 @@ let
     '';
   };
 
+  claudecode = pkgs.vimUtils.buildVimPlugin {
+    name = "claudecode.nvim";
+    src = pkgs.fetchFromGitHub {
+      owner = "coder";
+      repo = "claudecode.nvim";
+      rev = "93f8e48b1f6cbf2469b378c20b3df4115252d379";
+      sha256 = "sha256-dh7RrWezkmEtMKRasYCqfYanl6VxybC6Ra649H/KrPI=";
+    };
+    doCheck = false;
+  };
+
 in {
   extraPlugins = with pkgs.vimPlugins; [
     # Utility
@@ -57,6 +68,7 @@ in {
     prr
     opencode
     gitmoji-telescope
+    claudecode
 
     # Telescope extensions
     telescope-symbols-nvim
@@ -90,6 +102,12 @@ in {
 
   # OpenCode configuration
   extraConfigLua = ''
+    -- ClaudeCode setup
+    local claudecode_ok, claudecode = pcall(require, "claudecode")
+    if claudecode_ok then
+      claudecode.setup({})
+    end
+
     -- OpenCode setup
     local ok, op = pcall(require, "opencode")
     if ok then
@@ -245,6 +263,38 @@ in {
       options = {
         desc = "Find Gitmojis";
         silent = true;
+      };
+    }
+
+    # ClaudeCode keymaps
+    {
+      mode = "n";
+      key = "<leader>ac";
+      action = "<cmd>ClaudeCode<cr>";
+      options = {
+        desc = "Toggle Claude";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>af";
+      action = "<cmd>ClaudeCodeFocus<cr>";
+      options = {
+        desc = "Focus Claude";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "v";
+      key = "<leader>as";
+      action = "<cmd>ClaudeCodeSend<cr>";
+      options = {
+        desc = "Send to Claude";
+        silent = true;
+        noremap = true;
       };
     }
   ];
