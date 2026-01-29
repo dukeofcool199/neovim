@@ -117,7 +117,9 @@ in {
     -- ClaudeCode setup
     local claudecode_ok, claudecode = pcall(require, "claudecode")
     if claudecode_ok then
-      claudecode.setup({})
+      claudecode.setup({
+        cwd = vim.fn.getcwd()
+      })
     end
 
     -- OpenCode setup
