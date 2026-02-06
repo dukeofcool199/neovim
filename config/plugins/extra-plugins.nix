@@ -1,5 +1,4 @@
-{ pkgs, ... }:
-let
+{pkgs, ...}: let
   # Custom plugins not available in nixpkgs
   opencode = pkgs.vimUtils.buildVimPlugin {
     name = "opencode.nvim";
@@ -68,7 +67,6 @@ let
     };
     doCheck = false;
   };
-
 in {
   extraPlugins = with pkgs.vimPlugins; [
     # Utility
@@ -131,8 +129,8 @@ in {
       -- Enhanced OpenCode configuration
       vim.g.opencode_opts = {
         provider = {
-          enabled = "kitty",
-          kitty = {}
+          enabled = "snacks",
+          snacks = {}
         },
         events = {
           reload = true,
@@ -283,6 +281,75 @@ in {
       options = {
         desc = "Find Gitmojis";
         silent = true;
+      };
+    }
+
+    # OpenCode keymaps
+    {
+      mode = "n";
+      key = "<leader>oo";
+      action.__raw = ''
+        function()
+          require("opencode").toggle()
+        end
+      '';
+      options = {
+        desc = "Toggle OpenCode";
+        silent = true;
+      };
+    }
+    {
+      mode = ["n" "x"];
+      key = "<leader>oa";
+      action.__raw = ''
+        function()
+          require("opencode").ask("@this: ", { submit = true })
+        end
+      '';
+      options = {
+        desc = "Ask OpenCode";
+        silent = true;
+      };
+    }
+    {
+      mode = ["n" "x"];
+      key = "<leader>ox";
+      action.__raw = ''
+        function()
+          require("opencode").select()
+        end
+      '';
+      options = {
+        desc = "Execute action";
+        silent = true;
+      };
+    }
+    {
+      mode = ["n" "x"];
+      key = "<leader>or";
+      action.__raw = ''
+        function()
+          return require("opencode").operator("@this ")
+        end
+      '';
+      options = {
+        desc = "Add range to OpenCode";
+        silent = true;
+        expr = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>ol";
+      action.__raw = ''
+        function()
+          return require("opencode").operator("@this ") .. "_"
+        end
+      '';
+      options = {
+        desc = "Add line to OpenCode";
+        silent = true;
+        expr = true;
       };
     }
 
