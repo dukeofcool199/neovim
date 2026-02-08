@@ -16,6 +16,8 @@
         "<C-j>" = "cmp.mapping.scroll_docs(4)";
         "<C-k>" = "cmp.mapping.scroll_docs(-4)";
         "<C-Space>" = "cmp.mapping.complete()";
+        "<Up>" = "cmp.mapping.select_prev_item()";
+        "<Down>" = "cmp.mapping.select_next_item()";
         "<CR>" = "cmp.mapping.confirm({ behavior = cmp.ConfirmBehavior.Replace, select = true })";
         "<Tab>" = ''
           cmp.mapping(function(fallback)
