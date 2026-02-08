@@ -176,7 +176,8 @@
       # Haskell
       hls = {
         enable = true;
-        installGhc = false; # User should manage GHC themselves
+        packageFallback = true;
+        installGhc = true;
         filetypes = ["haskell" "lhaskell" "cabal"];
       };
 
