@@ -9,10 +9,6 @@
     };
   };
 
-  plugins.treesitter-context = {
-    enable = true;
-  };
-
   # Folding configuration (from tree-sitter.lua)
   opts = {
     foldmethod = "expr";
