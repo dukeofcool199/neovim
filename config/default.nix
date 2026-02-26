@@ -16,6 +16,7 @@
     lua-language-server
     nixd
     templ
+    cue
 
     # Formatters
     nixfmt

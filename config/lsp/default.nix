@@ -60,10 +60,10 @@
         enable = true;
       };
 
-      # Odin
-      ols = {
-        enable = true;
-      };
+      # Odin - Temporarily disabled due to build failure
+      # ols = {
+      #   enable = true;
+      # };
 
       # Dart
       dartls = {
@@ -140,6 +140,11 @@
 
       # CSS - use default package
       cssls = {
+        enable = true;
+      };
+
+      # CUE
+      cue = {
         enable = true;
       };
 
