@@ -41,8 +41,8 @@
     # Sign column - prevent flashing with gitsigns
     signcolumn = "yes";
 
-    # Disable mouse (professionals only)
-    mouse = "";
+    # Enable mouse for resizing panes
+    mouse = "n";
 
     # Completion menu
     completeopt = "menu";
