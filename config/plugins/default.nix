@@ -23,5 +23,6 @@
     ./multicursors.nix
     ./misc.nix
     ./extra-plugins.nix
+    ./jj-review.nix
   ];
 }
