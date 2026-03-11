@@ -1,5 +1,5 @@
-{ pkgs, ... }: {
-  imports = [ ./options.nix ./keymaps.nix ./plugins ./lsp ];
+{pkgs, ...}: {
+  imports = [./options.nix ./keymaps.nix ./plugins ./lsp];
 
   # Package configuration
   viAlias = true;
@@ -35,5 +35,5 @@
   ];
 
   # Custom colorscheme
-  colorschemes.monokai-pro = { enable = true; };
+  colorschemes.monokai-pro = {enable = true;};
 }

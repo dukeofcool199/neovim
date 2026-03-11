@@ -67,6 +67,17 @@
     };
     doCheck = false;
   };
+
+  reticle = pkgs.vimUtils.buildVimPlugin {
+    name = "reticle.nvim";
+    src = pkgs.fetchFromGitHub {
+      owner = "Tummetott";
+      repo = "reticle.nvim";
+      rev = "66bfa2b1c28fd71bb8ae4e871e0cd9e9c509ea86";
+      sha256 = "sha256-lf60+D68Oep0kZ9clfJTuiOkIMhZhgWyvFhf/kSYwVM=";
+    };
+    doCheck = false;
+  };
 in {
   extraPlugins = with pkgs.vimPlugins; [
     # Utility
@@ -79,6 +90,7 @@ in {
     gitmoji-telescope
     claudecode
     jj-nvim
+    reticle
 
     # Telescope extensions
     telescope-symbols-nvim
@@ -160,6 +172,17 @@ in {
     local jj_ok, jj = pcall(require, "jj")
     if jj_ok then
       jj.setup({})
+    end
+
+    -- Reticle setup (cursor cross)
+    local reticle_ok, reticle = pcall(require, "reticle")
+    if reticle_ok then
+      reticle.setup({
+        on_startup = {
+          cursorline = true,
+          cursorcolumn = true,
+        },
+      })
     end
   '';
 
@@ -382,6 +405,21 @@ in {
         desc = "Send to Claude";
         silent = true;
         noremap = true;
+      };
+    }
+
+    # Reticle keymap
+    {
+      mode = "n";
+      key = "<leader>tr";
+      action.__raw = ''
+        function()
+          require("reticle").toggle_cursorcross()
+        end
+      '';
+      options = {
+        desc = "Toggle Reticle Cross";
+        silent = true;
       };
     }
 
