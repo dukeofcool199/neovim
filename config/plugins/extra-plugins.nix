@@ -78,6 +78,18 @@
     };
     doCheck = false;
   };
+
+  # Override avante-nvim to use the latest source with Claude Max subscription fix
+  # while keeping the nixpkgs build infrastructure for native libraries
+  avante = pkgs.vimPlugins.avante-nvim.overrideAttrs (oldAttrs: {
+    version = "unstable-2026-03-11";
+    src = pkgs.fetchFromGitHub {
+      owner = "yetone";
+      repo = "avante.nvim";
+      rev = "9a7793461549939f1d52b2b309a1aa44680170c8";
+      sha256 = "sha256-EEkAoufj29P46RIUrRNG0xJL9Wu4X7LZCS1fer4/nZQ=";
+    };
+  });
 in {
   extraPlugins = with pkgs.vimPlugins; [
     # Utility
@@ -91,6 +103,13 @@ in {
     claudecode
     jj-nvim
     reticle
+    avante
+
+    # Avante dependencies
+    nui-nvim
+    plenary-nvim
+    render-markdown-nvim
+    dressing-nvim
 
     # Telescope extensions
     telescope-symbols-nvim
@@ -174,6 +193,28 @@ in {
       jj.setup({})
     end
 
+    -- Dressing setup for better input/select UI
+    local dressing_ok, dressing = pcall(require, "dressing")
+    if dressing_ok then
+      dressing.setup({
+        input = {
+          enabled = true,
+          default_prompt = "Input:",
+          start_in_insert = true,
+          border = "rounded",
+          relative = "cursor",
+          prefer_width = 40,
+          win_options = {
+            winblend = 0,
+          },
+        },
+        select = {
+          enabled = true,
+          backend = { "telescope", "builtin" },
+        },
+      })
+    end
+
     -- Reticle setup (cursor cross)
     local reticle_ok, reticle = pcall(require, "reticle")
     if reticle_ok then
@@ -181,6 +222,51 @@ in {
         on_startup = {
           cursorline = true,
           cursorcolumn = true,
+        },
+      })
+    end
+
+    -- Avante setup with inline autocomplete enabled
+    local avante_ok, avante = pcall(require, "avante")
+    if avante_ok then
+      avante.setup({
+        provider = "claude",
+        auto_suggestions_provider = "claude",
+        mode = "agentic",
+        behaviour = {
+          auto_suggestions = false,
+          auto_apply_diff_after_generation = false,
+          enable_token_counting = true,
+        },
+        windows = {
+          position = "right",
+          width = 30,
+        },
+        -- Use dressing for input/selector UI (more mature for password input)
+        selector = {
+          provider = "dressing",
+        },
+        input = {
+          provider = "dressing",
+        },
+        providers = {
+          claude = {
+            endpoint = "https://api.anthropic.com",
+            model = "claude-haiku-4-5-20251001",
+            auth_type = "max",
+            extra_request_body = {
+              temperature = 0.75,
+              max_tokens = 8192,
+            },
+          },
+        },
+        mappings = {
+          suggestion = {
+            accept = "<C-l>",
+            next = "<C-j>",
+            prev = "<C-k>",
+            dismiss = "<C-e>",
+          },
         },
       })
     end
@@ -376,10 +462,62 @@ in {
       };
     }
 
-    # ClaudeCode keymaps
+    # Avante keymaps (primary AI)
     {
       mode = "n";
-      key = "<leader>ac";
+      key = "<leader>aa";
+      action = "<cmd>AvanteAsk<CR>";
+      options = {
+        desc = "Avante Ask";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>at";
+      action = "<cmd>AvanteToggle<CR>";
+      options = {
+        desc = "Avante Toggle";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>ar";
+      action = "<cmd>AvanteRefresh<CR>";
+      options = {
+        desc = "Avante Refresh";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "v";
+      key = "<leader>ae";
+      action = "<cmd>AvanteEdit<CR>";
+      options = {
+        desc = "Avante Edit";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>an";
+      action = "<cmd>AvanteChatNew<CR>";
+      options = {
+        desc = "Avante New Chat";
+        silent = true;
+        noremap = true;
+      };
+    }
+
+    # ClaudeCode keymaps (moved to <leader>C)
+    {
+      mode = "n";
+      key = "<leader>Cc";
       action = "<cmd>ClaudeCode<cr>";
       options = {
         desc = "Toggle Claude";
@@ -389,7 +527,7 @@ in {
     }
     {
       mode = "n";
-      key = "<leader>af";
+      key = "<leader>Cf";
       action = "<cmd>ClaudeCodeFocus<cr>";
       options = {
         desc = "Focus Claude";
@@ -399,7 +537,7 @@ in {
     }
     {
       mode = "v";
-      key = "<leader>as";
+      key = "<leader>Cs";
       action = "<cmd>ClaudeCodeSend<cr>";
       options = {
         desc = "Send to Claude";
