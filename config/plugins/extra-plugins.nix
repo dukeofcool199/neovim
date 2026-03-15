@@ -131,6 +131,7 @@ in {
     vim-markdown-toc
 
     # Language specific
+    haskell-vim
     vim-astro
     vim-prisma
     vim-vue-plugin
