@@ -1,16 +1,4 @@
 {pkgs, ...}: let
-  # Custom plugins not available in nixpkgs
-  opencode = pkgs.vimUtils.buildVimPlugin {
-    name = "opencode.nvim";
-    src = pkgs.fetchFromGitHub {
-      owner = "NickvanDyke";
-      repo = "opencode.nvim";
-      rev = "aba9e8c64cdb074d3d481e3a0101f6113061bef3";
-      sha256 = "sha256-+hgiJ6GXOPafdmUuSdwhbyIKILjI5HMJQYtsFtdSp0k=";
-    };
-    doCheck = false;
-  };
-
   gitmoji-telescope = pkgs.vimUtils.buildVimPlugin rec {
     name = "telescope-gitmoji.nvim";
     src = pkgs.fetchFromGitHub {
@@ -44,17 +32,6 @@
       mv vim/* .  # Move the vim directory's contents to the root
       rmdir vim
     '';
-  };
-
-  claudecode = pkgs.vimUtils.buildVimPlugin {
-    name = "claudecode.nvim";
-    src = pkgs.fetchFromGitHub {
-      owner = "coder";
-      repo = "claudecode.nvim";
-      rev = "93f8e48b1f6cbf2469b378c20b3df4115252d379";
-      sha256 = "sha256-dh7RrWezkmEtMKRasYCqfYanl6VxybC6Ra649H/KrPI=";
-    };
-    doCheck = false;
   };
 
   jj-nvim = pkgs.vimUtils.buildVimPlugin {
@@ -98,9 +75,7 @@ in {
     # Custom plugins (not available in nixpkgs)
     spongebob
     prr
-    opencode
     gitmoji-telescope
-    claudecode
     jj-nvim
     reticle
     avante
@@ -142,45 +117,7 @@ in {
     telescope-vim-bookmarks-nvim
   ];
 
-  # OpenCode configuration
   extraConfigLua = ''
-    -- ClaudeCode setup
-    local claudecode_ok, claudecode = pcall(require, "claudecode")
-    if claudecode_ok then
-      claudecode.setup({
-        cwd = vim.fn.getcwd()
-      })
-    end
-
-    -- OpenCode setup
-    local ok, op = pcall(require, "opencode")
-    if ok then
-      -- Enable auto-reload for OpenCode file edits
-      vim.o.autoread = true
-
-      -- Enhanced OpenCode configuration
-      vim.g.opencode_opts = {
-        provider = {
-          enabled = "snacks",
-          snacks = {}
-        },
-        events = {
-          reload = true,
-        },
-        prompts = {
-          diagnostics = "Explain @diagnostics",
-          diff = "Review the following git diff for correctness and readability: @diff",
-          document = "Add comments documenting @this",
-          explain = "Explain @this and its context",
-          fix = "Fix @diagnostics",
-          implement = "Implement @this",
-          optimize = "Optimize @this for performance and readability",
-          review = "Review @this for correctness and readability",
-          test = "Add tests for @this"
-        }
-      }
-    end
-
     -- Load telescope gitmoji extension
     local telescope_ok, telescope = pcall(require, "telescope")
     if telescope_ok then
@@ -394,75 +331,6 @@ in {
       };
     }
 
-    # OpenCode keymaps
-    {
-      mode = "n";
-      key = "<leader>oo";
-      action.__raw = ''
-        function()
-          require("opencode").toggle()
-        end
-      '';
-      options = {
-        desc = "Toggle OpenCode";
-        silent = true;
-      };
-    }
-    {
-      mode = ["n" "x"];
-      key = "<leader>oa";
-      action.__raw = ''
-        function()
-          require("opencode").ask("@this: ", { submit = true })
-        end
-      '';
-      options = {
-        desc = "Ask OpenCode";
-        silent = true;
-      };
-    }
-    {
-      mode = ["n" "x"];
-      key = "<leader>ox";
-      action.__raw = ''
-        function()
-          require("opencode").select()
-        end
-      '';
-      options = {
-        desc = "Execute action";
-        silent = true;
-      };
-    }
-    {
-      mode = ["n" "x"];
-      key = "<leader>or";
-      action.__raw = ''
-        function()
-          return require("opencode").operator("@this ")
-        end
-      '';
-      options = {
-        desc = "Add range to OpenCode";
-        silent = true;
-        expr = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>ol";
-      action.__raw = ''
-        function()
-          return require("opencode").operator("@this ") .. "_"
-        end
-      '';
-      options = {
-        desc = "Add line to OpenCode";
-        silent = true;
-        expr = true;
-      };
-    }
-
     # Avante keymaps (primary AI)
     {
       mode = "n";
@@ -510,38 +378,6 @@ in {
       action = "<cmd>AvanteChatNew<CR>";
       options = {
         desc = "Avante New Chat";
-        silent = true;
-        noremap = true;
-      };
-    }
-
-    # ClaudeCode keymaps (moved to <leader>C)
-    {
-      mode = "n";
-      key = "<leader>Cc";
-      action = "<cmd>ClaudeCode<cr>";
-      options = {
-        desc = "Toggle Claude";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>Cf";
-      action = "<cmd>ClaudeCodeFocus<cr>";
-      options = {
-        desc = "Focus Claude";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "v";
-      key = "<leader>Cs";
-      action = "<cmd>ClaudeCodeSend<cr>";
-      options = {
-        desc = "Send to Claude";
         silent = true;
         noremap = true;
       };

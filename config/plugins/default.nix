@@ -18,7 +18,6 @@
     ./zen-mode.nix
     ./twilight.nix
     ./neogen.nix
-    ./snacks.nix
     ./conform.nix
     ./multicursors.nix
     ./misc.nix
