@@ -23,5 +23,6 @@
     ./misc.nix
     ./extra-plugins.nix
     ./jj-review.nix
+    ./octo.nix
   ];
 }
