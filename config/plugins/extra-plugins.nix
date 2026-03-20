@@ -118,96 +118,97 @@ in {
   ];
 
   extraConfigLua = ''
-    -- Load telescope gitmoji extension
-    local telescope_ok, telescope = pcall(require, "telescope")
-    if telescope_ok then
-      pcall(telescope.load_extension, "gitmoji")
-      pcall(telescope.load_extension, "vim_bookmarks")
-    end
+            -- Load telescope gitmoji extension
+            local telescope_ok, telescope = pcall(require, "telescope")
+            if telescope_ok then
+              pcall(telescope.load_extension, "gitmoji")
+              pcall(telescope.load_extension, "vim_bookmarks")
+            end
 
-    -- jj.nvim setup (Jujutsu VCS integration)
-    local jj_ok, jj = pcall(require, "jj")
-    if jj_ok then
-      jj.setup({})
-    end
+            -- jj.nvim setup (Jujutsu VCS integration)
+            local jj_ok, jj = pcall(require, "jj")
+            if jj_ok then
+              jj.setup({})
+            end
 
-    -- Dressing setup for better input/select UI
-    local dressing_ok, dressing = pcall(require, "dressing")
-    if dressing_ok then
-      dressing.setup({
-        input = {
-          enabled = true,
-          default_prompt = "Input:",
-          start_in_insert = true,
-          border = "rounded",
-          relative = "cursor",
-          prefer_width = 40,
-          win_options = {
-            winblend = 0,
-          },
-        },
-        select = {
-          enabled = true,
-          backend = { "telescope", "builtin" },
-        },
-      })
-    end
+            -- Dressing setup for better input/select UI
+            local dressing_ok, dressing = pcall(require, "dressing")
+            if dressing_ok then
+              dressing.setup({
+                input = {
+                  enabled = true,
+                  default_prompt = "Input:",
+                  start_in_insert = true,
+                  border = "rounded",
+                  relative = "cursor",
+                  prefer_width = 40,
+                  win_options = {
+                    winblend = 0,
+                  },
+                },
+                select = {
+                  enabled = true,
+                  backend = { "telescope", "builtin" },
+                },
+              })
+            end
 
-    -- Reticle setup (cursor cross)
-    local reticle_ok, reticle = pcall(require, "reticle")
-    if reticle_ok then
-      reticle.setup({
-        on_startup = {
-          cursorline = true,
-          cursorcolumn = true,
-        },
-      })
-    end
+            -- Reticle setup (cursor cross)
+            local reticle_ok, reticle = pcall(require, "reticle")
+            if reticle_ok then
+              reticle.setup({
+                on_startup = {
+                  cursorline = true,
+                  cursorcolumn = true,
+                },
+              })
+            end
 
-    -- Avante setup with inline autocomplete enabled
-    local avante_ok, avante = pcall(require, "avante")
-    if avante_ok then
-      avante.setup({
-        provider = "claude",
-        auto_suggestions_provider = "claude",
-        mode = "agentic",
-        behaviour = {
-          auto_suggestions = false,
-          auto_apply_diff_after_generation = false,
-          enable_token_counting = true,
+            -- Avante setup with inline autocomplete enabled
+        local avante_ok, avante = pcall(require, "avante")
+        if avante_ok then
+              require("avante").setup({
+      mode = "agentic",
+      provider = "opencode",
+
+      behaviour = {
+        auto_suggestions = false,
+        auto_apply_diff_after_generation = false,
+        enable_token_counting = true,
+      },
+
+      windows = {
+        position = "right",
+        width = 30,
+      },
+
+      selector = {
+        provider = "dressing",
+      },
+
+      input = {
+        provider = "dressing",
+      },
+
+      -- optional, because current Avante already ships an opencode ACP entry
+      acp_providers = {
+        ["opencode"] = {
+          command = "opencode",
+          args = { "acp" },
         },
-        windows = {
-          position = "right",
-          width = 30,
+      },
+
+      mappings = {
+        suggestion = {
+          accept = "<C-l>",
+          next = "<C-j>",
+          prev = "<C-k>",
+          dismiss = "<C-e>",
         },
-        -- Use dressing for input/selector UI (more mature for password input)
-        selector = {
-          provider = "dressing",
-        },
-        input = {
-          provider = "dressing",
-        },
-        providers = {
-          claude = {
-            endpoint = "https://api.anthropic.com",
-            model = "claude-haiku-4-5-20251001",
-            auth_type = "max",
-            extra_request_body = {
-              temperature = 0.75,
-              max_tokens = 8192,
-            },
-          },
-        },
-        mappings = {
-          suggestion = {
-            accept = "<C-l>",
-            next = "<C-j>",
-            prev = "<C-k>",
-            dismiss = "<C-e>",
-          },
-        },
-      })
-    end
+      },
+    })
+
+        end
   '';
 
   # Bookmark keymaps
