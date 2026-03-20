@@ -153,6 +153,14 @@ in {
               })
             end
 
+            -- Render-markdown setup (exclude octo buffers to prevent conflicts)
+            local render_markdown_ok, render_markdown = pcall(require, "render-markdown")
+            if render_markdown_ok then
+              render_markdown.setup({
+                file_types = { "markdown", "Avante" },
+              })
+            end
+
             -- Reticle setup (cursor cross)
             local reticle_ok, reticle = pcall(require, "reticle")
             if reticle_ok then
