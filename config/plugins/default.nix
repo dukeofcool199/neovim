@@ -1,5 +1,4 @@
-{ pkgs, ... }:
-{
+{pkgs, ...}: {
   imports = [
     ./treesitter.nix
     ./telescope.nix
@@ -22,7 +21,13 @@
     ./multicursors.nix
     ./misc.nix
     ./extra-plugins.nix
-    ./jj-review.nix
+    ./jj.nix
     ./octo.nix
+    ./avante.nix
+    ./dressing.nix
+    ./render-markdown.nix
+    ./reticle.nix
+    ./bookmarks.nix
+    ./gitmoji.nix
   ];
 }
