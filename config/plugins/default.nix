@@ -28,6 +28,6 @@
     ./render-markdown.nix
     ./reticle.nix
     ./bookmarks.nix
-    ./gitmoji.nix
+    ./haskell-tools.nix
   ];
 }

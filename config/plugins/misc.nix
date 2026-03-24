@@ -39,20 +39,10 @@
   # Ledger accounting files
   plugins.ledger.enable = true;
 
-  # Git
-  plugins.fugitive.enable = true;
-
   # FZF environment
   extraConfigLua = ''
     vim.env.FZF_DEFAULT_OPTS = '--layout=reverse'
   '';
-
-  # Git autocommand for starting in insert mode
-  autoCmd = [{
-    event = [ "FileType" ];
-    pattern = [ "gitcommit" "gitrebase" ];
-    command = "startinsert | 1";
-  }];
 
   # Keymaps for various functionality
   keymaps = [
@@ -63,35 +53,6 @@
       action.__raw = "function() vim.o.hlsearch = not vim.o.hlsearch end";
       options = {
         desc = "Toggle Highlight";
-        silent = true;
-      };
-    }
-
-    # Git keymaps
-    {
-      mode = "n";
-      key = "<leader>gw";
-      action = "<cmd>Gwrite<cr>";
-      options = {
-        desc = "Git write";
-        silent = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>gc";
-      action = "<cmd>G commit<cr>";
-      options = {
-        desc = "Git commit";
-        silent = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>gp";
-      action = "<cmd>Git push<cr>";
-      options = {
-        desc = "Git push";
         silent = true;
       };
     }

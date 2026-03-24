@@ -178,14 +178,6 @@
         filetypes = ["css" "vue" "eruby" "templ" "html" "htmldjango" "markdown" "javascript" "javascriptreact" "less" "sass" "scss" "pug" "typescriptreact"];
       };
 
-      # Haskell
-      hls = {
-        enable = true;
-        packageFallback = true;
-        installGhc = true;
-        filetypes = ["haskell" "lhaskell" "cabal"];
-      };
-
       # Lua
       lua_ls = {
         enable = true;
