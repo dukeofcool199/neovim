@@ -29,5 +29,6 @@
     ./reticle.nix
     ./bookmarks.nix
     ./haskell-tools.nix
+    ./scripture.nix
   ];
 }

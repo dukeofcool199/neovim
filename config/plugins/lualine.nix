@@ -48,7 +48,19 @@
           "diagnostics"
           "lsp_progress"
         ];
-        lualine_x = [ ];
+        lualine_x = [
+          {
+            __unkeyed-1.__raw = ''
+              function()
+                if _G.scripture_lualine then
+                  return _G.scripture_lualine()
+                end
+                return ""
+              end
+            '';
+            color = { fg = "#d4a959"; };
+          }
+        ];
         lualine_y = [ "filetype" "progress" ];
         lualine_z = [
           {

@@ -11,6 +11,7 @@
   };
 
   outputs = {
+    self,
     nixpkgs,
     nixvim,
     ...
@@ -21,10 +22,16 @@
     packages = forAllSystems (system: let
       pkgs = nixpkgs.legacyPackages.${system};
       nixvim' = nixvim.legacyPackages.${system};
-      config = import ./config {inherit pkgs;};
+      gitRev =
+        if self ? rev
+        then self.rev
+        else if self ? dirtyRev
+        then builtins.substring 0 40 self.dirtyRev
+        else "0000000000000000000000000000000000000000";
       nvim = nixvim'.makeNixvimWithModule {
         inherit pkgs;
-        module = config;
+        module = import ./config;
+        extraSpecialArgs = {inherit gitRev;};
       };
     in {
       default = nvim;
