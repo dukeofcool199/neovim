@@ -113,6 +113,71 @@ in {
       return _scripture.short_ref
     end
 
+    -- Runtime Bible data (lazy-loaded for search)
+    local _bible_json_path = "${./esv.json}"
+    local _bible_cache = nil
+    local _bible_flat = nil
+
+    local function load_bible()
+      if _bible_cache then return _bible_cache end
+      local f = io.open(_bible_json_path, "r")
+      if not f then
+        vim.notify("Scripture: could not open Bible JSON", vim.log.levels.ERROR)
+        return nil
+      end
+      local content = f:read("*a")
+      f:close()
+      _bible_cache = vim.json.decode(content)
+      return _bible_cache
+    end
+
+    local function sorted_numeric_keys(tbl)
+      local keys = {}
+      for k in pairs(tbl) do
+        table.insert(keys, tonumber(k) or k)
+      end
+      table.sort(keys)
+      return keys
+    end
+
+    local function get_flat_bible()
+      if _bible_flat then return _bible_flat end
+      local bible = load_bible()
+      if not bible then return {} end
+
+      local entries = {}
+      local books = {}
+      for name in pairs(bible) do table.insert(books, name) end
+      table.sort(books)
+
+      for _, book in ipairs(books) do
+        local abbr = _book_abbrevs[book] or book:sub(1, 3)
+        local chapters = sorted_numeric_keys(bible[book])
+        for _, ch in ipairs(chapters) do
+          local ch_str = tostring(ch)
+          local verse_nums = sorted_numeric_keys(bible[book][ch_str])
+          for _, v in ipairs(verse_nums) do
+            local v_str = tostring(v)
+            local text = bible[book][ch_str][v_str]
+            local ref = abbr .. " " .. ch_str .. ":" .. v_str
+            table.insert(entries, {
+              book = book,
+              chapter = ch_str,
+              verse = v,
+              text = text,
+              ref = ref,
+              full_ref = book .. " " .. ch_str .. ":" .. v_str,
+              display = ref .. "  " .. text,
+              ordinal = book .. " " .. ch_str .. ":" .. v_str .. " " .. text,
+            })
+          end
+        end
+      end
+
+      _bible_flat = entries
+      return entries
+    end
+
     -- Word-wrap helper
     local function wrap_text(text, max_width, indent)
       indent = indent or ""
@@ -133,38 +198,32 @@ in {
       return result
     end
 
-    -- :Scripture command - scrollable chapter view
-    vim.api.nvim_create_user_command("Scripture", function()
+    -- Reusable chapter popup
+    local function show_chapter(chapter_data, book, chapter, highlight_verse, title)
       local width = math.min(80, math.floor(vim.o.columns * 0.8))
       local height = math.min(40, math.floor(vim.o.lines * 0.8))
-      local text_width = width - 4 -- padding for verse numbers
+      local text_width = width - 4
 
-      -- Build lines for every verse in the chapter
       local lines = {}
       local highlight_start = nil
       local highlight_end = nil
 
       -- Header
-      table.insert(lines, _scripture.book .. " " .. _scripture.chapter .. " (ESV)")
-      table.insert(lines, "Rev: " .. _scripture.rev)
-      table.insert(lines, string.rep("─", width - 2))
+      table.insert(lines, title or (book .. " " .. chapter .. " (ESV)"))
+      table.insert(lines, string.rep("~", width - 2))
       table.insert(lines, "")
 
       -- Get sorted verse numbers
-      local verse_nums = {}
-      for k in pairs(_scripture.chapter_verses) do
-        table.insert(verse_nums, k)
-      end
-      table.sort(verse_nums)
+      local verse_nums = sorted_numeric_keys(chapter_data)
 
       -- Render each verse
       for _, vnum in ipairs(verse_nums) do
-        local vtext = _scripture.chapter_verses[vnum]
+        local vtext = chapter_data[tostring(vnum)]
         local prefix = string.format("%3d  ", vnum)
         local continuation = "     "
         local wrapped = wrap_text(prefix .. vtext, text_width, continuation)
 
-        if vnum == _scripture.verse then
+        if vnum == highlight_verse then
           highlight_start = #lines
         end
 
@@ -172,7 +231,7 @@ in {
           table.insert(lines, wline)
         end
 
-        if vnum == _scripture.verse then
+        if vnum == highlight_verse then
           highlight_end = #lines - 1
         end
 
@@ -202,12 +261,12 @@ in {
         row = row,
         col = col,
         border = "rounded",
-        title = " " .. _scripture.full_ref .. " (ESV) ",
+        title = " " .. (title or (book .. " " .. chapter .. " (ESV)")) .. " ",
         title_pos = "center",
         style = "minimal",
       })
 
-      -- Scroll to the selected verse
+      -- Scroll to the highlighted verse
       if highlight_start then
         local center_line = math.floor((highlight_start + highlight_end) / 2)
         vim.api.nvim_win_set_cursor(win, { center_line + 1, 0 })
@@ -221,7 +280,104 @@ in {
       end
       vim.keymap.set("n", "q", close, { buffer = buf, silent = true })
       vim.keymap.set("n", "<Esc>", close, { buffer = buf, silent = true })
-    end, { desc = "Show scripture chapter" })
+    end
+
+    -- :Scripture command - version verse chapter view (build-time data)
+    vim.api.nvim_create_user_command("Scripture", function()
+      show_chapter(
+        _scripture.chapter_verses,
+        _scripture.book,
+        _scripture.chapter,
+        _scripture.verse,
+        _scripture.full_ref .. " (ESV) | Rev: " .. _scripture.rev
+      )
+    end, { desc = "Show scripture version chapter" })
+
+    -- :ScriptureSearch command - Telescope Bible search
+    vim.api.nvim_create_user_command("ScriptureSearch", function()
+      local ok, pickers = pcall(require, "telescope.pickers")
+      if not ok then
+        vim.notify("Telescope not available", vim.log.levels.ERROR)
+        return
+      end
+      local finders = require("telescope.finders")
+      local conf = require("telescope.config").values
+      local actions = require("telescope.actions")
+      local action_state = require("telescope.actions.state")
+      local previewers = require("telescope.previewers")
+
+      local entries = get_flat_bible()
+      if #entries == 0 then return end
+
+      pickers.new({}, {
+        prompt_title = "Scripture Search (ESV)",
+        finder = finders.new_table({
+          results = entries,
+          entry_maker = function(entry)
+            return {
+              value = entry,
+              display = entry.display,
+              ordinal = entry.ordinal,
+            }
+          end,
+        }),
+        sorter = conf.generic_sorter({}),
+        previewer = previewers.new_buffer_previewer({
+          title = "Context",
+          define_preview = function(self, entry)
+            local e = entry.value
+            local bible = load_bible()
+            if not bible or not bible[e.book] or not bible[e.book][e.chapter] then return end
+
+            local ch = bible[e.book][e.chapter]
+            local verse_nums = sorted_numeric_keys(ch)
+            local preview_lines = {}
+            table.insert(preview_lines, e.book .. " " .. e.chapter .. " (ESV)")
+            table.insert(preview_lines, string.rep("~", 60))
+            table.insert(preview_lines, "")
+
+            local hl_lines = {}
+            for _, vnum in ipairs(verse_nums) do
+              local vtext = ch[tostring(vnum)]
+              local prefix = string.format("%3d  ", vnum)
+              local line = prefix .. vtext
+              local line_idx = #preview_lines
+              table.insert(preview_lines, line)
+              if vnum == e.verse then
+                table.insert(hl_lines, line_idx)
+              end
+              table.insert(preview_lines, "")
+            end
+
+            vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, preview_lines)
+            local ns = vim.api.nvim_create_namespace("scripture_preview")
+            for _, idx in ipairs(hl_lines) do
+              pcall(vim.api.nvim_buf_add_highlight, self.state.bufnr, ns, "CurSearch", idx, 0, -1)
+            end
+          end,
+        }),
+        attach_mappings = function(prompt_bufnr)
+          actions.select_default:replace(function()
+            local entry = action_state.get_selected_entry()
+            actions.close(prompt_bufnr)
+            if not entry then return end
+
+            local e = entry.value
+            local bible = load_bible()
+            if not bible or not bible[e.book] or not bible[e.book][e.chapter] then return end
+
+            show_chapter(
+              bible[e.book][e.chapter],
+              e.book,
+              e.chapter,
+              e.verse,
+              e.full_ref .. " (ESV)"
+            )
+          end)
+          return true
+        end,
+      }):find()
+    end, { desc = "Search the Bible (ESV)" })
 
     -- Startup notification
     vim.api.nvim_create_autocmd("VimEnter", {
@@ -244,6 +400,16 @@ in {
       action = "<cmd>Scripture<CR>";
       options = {
         desc = "Show Verse";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>Ss";
+      action = "<cmd>ScriptureSearch<CR>";
+      options = {
+        desc = "Search Bible";
         silent = true;
         noremap = true;
       };
