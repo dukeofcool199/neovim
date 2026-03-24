@@ -55,6 +55,11 @@
   verseText = chapter.${verseKey};
 
   fullRef = "${bookName} ${chapterKey}:${verseKey}";
+
+  # Serialize entire chapter as a Lua table for the popup
+  chapterLua = builtins.concatStringsSep "\n" (
+    builtins.map (v: "    [${v}] = [==[${chapter.${v}}]==],") verses
+  );
 in {
   extraConfigLua = ''
     -- Scripture version identifier
@@ -62,10 +67,13 @@ in {
     local _scripture = {
       book = [==[${bookName}]==],
       chapter = "${chapterKey}",
-      verse = "${verseKey}",
+      verse = ${verseKey},
       text = [==[${verseText}]==],
       full_ref = [==[${fullRef}]==],
       rev = "${gitRev}",
+      chapter_verses = {
+    ${chapterLua}
+      },
     }
 
     local _book_abbrevs = {
@@ -103,41 +111,84 @@ in {
       return _scripture.short_ref
     end
 
-    -- :Scripture command - floating window
-    vim.api.nvim_create_user_command("Scripture", function()
-      local header = _scripture.full_ref .. " (ESV)"
-      local lines = { header, "", _scripture.text, "", "Rev: " .. _scripture.rev }
-
-      -- Word-wrap
-      local max_width = math.min(72, math.floor(vim.o.columns * 0.7))
-      local wrapped = {}
-      for _, line in ipairs(lines) do
-        if #line <= max_width then
-          table.insert(wrapped, line)
-        else
-          local remaining = line
-          while #remaining > max_width do
-            local break_at = remaining:sub(1, max_width):match(".*()%s") or max_width
-            table.insert(wrapped, remaining:sub(1, break_at - 1))
-            remaining = remaining:sub(break_at + 1)
-          end
-          if #remaining > 0 then
-            table.insert(wrapped, remaining)
-          end
+    -- Word-wrap helper
+    local function wrap_text(text, max_width, indent)
+      indent = indent or ""
+      local result = {}
+      if #text <= max_width then
+        table.insert(result, text)
+      else
+        local remaining = text
+        while #remaining > max_width do
+          local break_at = remaining:sub(1, max_width):match(".*()%s") or max_width
+          table.insert(result, remaining:sub(1, break_at - 1))
+          remaining = indent .. remaining:sub(break_at + 1)
+        end
+        if #remaining > 0 then
+          table.insert(result, remaining)
         end
       end
+      return result
+    end
 
-      local width = 0
-      for _, l in ipairs(wrapped) do
-        width = math.max(width, #l)
+    -- :Scripture command - scrollable chapter view
+    vim.api.nvim_create_user_command("Scripture", function()
+      local width = math.min(80, math.floor(vim.o.columns * 0.8))
+      local height = math.min(40, math.floor(vim.o.lines * 0.8))
+      local text_width = width - 4 -- padding for verse numbers
+
+      -- Build lines for every verse in the chapter
+      local lines = {}
+      local highlight_start = nil
+      local highlight_end = nil
+
+      -- Header
+      table.insert(lines, _scripture.book .. " " .. _scripture.chapter .. " (ESV)")
+      table.insert(lines, "Rev: " .. _scripture.rev)
+      table.insert(lines, string.rep("─", width - 2))
+      table.insert(lines, "")
+
+      -- Get sorted verse numbers
+      local verse_nums = {}
+      for k in pairs(_scripture.chapter_verses) do
+        table.insert(verse_nums, k)
       end
-      width = math.min(width + 2, vim.o.columns - 4)
-      local height = #wrapped
+      table.sort(verse_nums)
+
+      -- Render each verse
+      for _, vnum in ipairs(verse_nums) do
+        local vtext = _scripture.chapter_verses[vnum]
+        local prefix = string.format("%3d  ", vnum)
+        local continuation = "     "
+        local wrapped = wrap_text(prefix .. vtext, text_width, continuation)
+
+        if vnum == _scripture.verse then
+          highlight_start = #lines
+        end
+
+        for _, wline in ipairs(wrapped) do
+          table.insert(lines, wline)
+        end
+
+        if vnum == _scripture.verse then
+          highlight_end = #lines - 1
+        end
+
+        table.insert(lines, "")
+      end
 
       local buf = vim.api.nvim_create_buf(false, true)
-      vim.api.nvim_buf_set_lines(buf, 0, -1, false, wrapped)
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
       vim.bo[buf].modifiable = false
       vim.bo[buf].buftype = "nofile"
+
+      -- Highlight the selected verse
+      local ns = vim.api.nvim_create_namespace("scripture_hl")
+      if highlight_start and highlight_end then
+        for i = highlight_start, highlight_end do
+          vim.api.nvim_buf_add_highlight(buf, ns, "CurSearch", i, 0, -1)
+        end
+      end
 
       local row = math.floor((vim.o.lines - height) / 2)
       local col = math.floor((vim.o.columns - width) / 2)
@@ -149,10 +200,17 @@ in {
         row = row,
         col = col,
         border = "rounded",
-        title = " Scripture ",
+        title = " " .. _scripture.full_ref .. " (ESV) ",
         title_pos = "center",
         style = "minimal",
       })
+
+      -- Scroll to the selected verse
+      if highlight_start then
+        local center_line = math.floor((highlight_start + highlight_end) / 2)
+        vim.api.nvim_win_set_cursor(win, { center_line + 1, 0 })
+        vim.cmd("normal! zz")
+      end
 
       local function close()
         if vim.api.nvim_win_is_valid(win) then
@@ -161,7 +219,7 @@ in {
       end
       vim.keymap.set("n", "q", close, { buffer = buf, silent = true })
       vim.keymap.set("n", "<Esc>", close, { buffer = buf, silent = true })
-    end, { desc = "Show scripture version identifier" })
+    end, { desc = "Show scripture chapter" })
 
     -- Startup notification
     vim.api.nvim_create_autocmd("VimEnter", {
