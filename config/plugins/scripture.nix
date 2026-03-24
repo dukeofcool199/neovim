@@ -23,7 +23,9 @@
       "e" = 14;
       "f" = 15;
     }
-    .${c};
+    .${
+      c
+    };
   hexToInt = hex:
     builtins.foldl'
     (acc: c: acc * 16 + hexCharToInt c)
@@ -79,9 +81,9 @@ in {
     local _book_abbrevs = {
       ["Genesis"] = "Gen", ["Exodus"] = "Exo", ["Leviticus"] = "Lev",
       ["Numbers"] = "Num", ["Deuteronomy"] = "Deu", ["Joshua"] = "Jos",
-      ["Judges"] = "Jdg", ["Ruth"] = "Rut", ["1 Samuel"] = "1Sa",
-      ["2 Samuel"] = "2Sa", ["1 Kings"] = "1Ki", ["2 Kings"] = "2Ki",
-      ["1 Chronicles"] = "1Ch", ["2 Chronicles"] = "2Ch", ["Ezra"] = "Ezr",
+      ["Judges"] = "Jdg", ["Ruth"] = "Rut", ["1 Samuel"] = "1 Sa",
+      ["2 Samuel"] = "2 Sa", ["1 Kings"] = "1 Ki", ["2 Kings"] = "2 Ki",
+      ["1 Chronicles"] = "1 Ch", ["2 Chronicles"] = "2 Ch", ["Ezra"] = "Ezr",
       ["Nehemiah"] = "Neh", ["Esther"] = "Est", ["Job"] = "Job",
       ["Psalms"] = "Psa", ["Proverbs"] = "Pro", ["Ecclesiastes"] = "Ecc",
       ["Song of Solomon"] = "Sol", ["Isaiah"] = "Isa", ["Jeremiah"] = "Jer",
@@ -92,14 +94,14 @@ in {
       ["Haggai"] = "Hag", ["Zechariah"] = "Zec", ["Malachi"] = "Mal",
       ["Matthew"] = "Mat", ["Mark"] = "Mar", ["Luke"] = "Luk",
       ["John"] = "Joh", ["Acts"] = "Act", ["Romans"] = "Rom",
-      ["1 Corinthians"] = "1Co", ["2 Corinthians"] = "2Co",
+      ["1 Corinthians"] = "1 Co", ["2 Corinthians"] = "2 Co",
       ["Galatians"] = "Gal", ["Ephesians"] = "Eph",
       ["Philippians"] = "Phi", ["Colossians"] = "Col",
-      ["1 Thessalonians"] = "1Th", ["2 Thessalonians"] = "2Th",
-      ["1 Timothy"] = "1Ti", ["2 Timothy"] = "2Ti", ["Titus"] = "Tit",
+      ["1 Thessalonians"] = "1 Th", ["2 Thessalonians"] = "2 Th",
+      ["1 Timothy"] = "1 Ti", ["2 Timothy"] = "2 Ti", ["Titus"] = "Tit",
       ["Philemon"] = "Phm", ["Hebrews"] = "Heb", ["James"] = "Jam",
-      ["1 Peter"] = "1Pe", ["2 Peter"] = "2Pe", ["1 John"] = "1Jo",
-      ["2 John"] = "2Jo", ["3 John"] = "3Jo", ["Jude"] = "Jud",
+      ["1 Peter"] = "1 Pe", ["2 Peter"] = "2 Pe", ["1 John"] = "1 Jo",
+      ["2 John"] = "2 Jo", ["3 John"] = "3 Jo", ["Jude"] = "Jud",
       ["Revelation"] = "Rev",
     }
 
