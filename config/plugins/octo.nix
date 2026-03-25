@@ -1,5 +1,4 @@
-{ ... }:
-{
+{...}: {
   plugins.octo = {
     enable = true;
 
@@ -24,16 +23,73 @@
 
   keymaps = [
     # Start/Resume review
-    { mode = "n"; key = "<leader>ors"; action = "<cmd>Octo review start<CR>"; options = { desc = "Start Review"; silent = true; }; }
-    { mode = "n"; key = "<leader>orr"; action = "<cmd>Octo review resume<CR>"; options = { desc = "Resume Review"; silent = true; }; }
+    {
+      mode = "n";
+      key = "<leader>ors";
+      action = "<cmd>Octo review start<CR>";
+      options = {
+        desc = "Start Review";
+        silent = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>orr";
+      action = "<cmd>Octo review resume<CR>";
+      options = {
+        desc = "Resume Review";
+        silent = true;
+      };
+    }
 
     # Submit review
-    { mode = "n"; key = "<leader>osa"; action = "<cmd>Octo review submit approve<CR>"; options = { desc = "Approve"; silent = true; }; }
-    { mode = "n"; key = "<leader>osc"; action = "<cmd>Octo review submit comment<CR>"; options = { desc = "Comment Only"; silent = true; }; }
-    { mode = "n"; key = "<leader>osr"; action = "<cmd>Octo review submit request_changes<CR>"; options = { desc = "Request Changes"; silent = true; }; }
+    {
+      mode = "n";
+      key = "<leader>osa";
+      action = "<cmd>Octo review submit approve<CR>";
+      options = {
+        desc = "Approve";
+        silent = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>osc";
+      action = "<cmd>Octo review submit comment<CR>";
+      options = {
+        desc = "Comment Only";
+        silent = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>osr";
+      action = "<cmd>Octo review submit request_changes<CR>";
+      options = {
+        desc = "Request Changes";
+        silent = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>ol";
+      action = "<cmd>Octo pr list<CR>";
+      options = {
+        desc = "List Prs";
+        silent = true;
+      };
+    }
 
     # Discard
-    { mode = "n"; key = "<leader>ord"; action = "<cmd>Octo review discard<CR>"; options = { desc = "Discard Review"; silent = true; }; }
+    {
+      mode = "n";
+      key = "<leader>ord";
+      action = "<cmd>Octo review discard<CR>";
+      options = {
+        desc = "Discard Review";
+        silent = true;
+      };
+    }
   ];
 
   extraConfigLua = ''
