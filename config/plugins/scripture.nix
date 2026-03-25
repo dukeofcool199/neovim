@@ -218,7 +218,7 @@ in {
 
       -- Render each verse
       for _, vnum in ipairs(verse_nums) do
-        local vtext = chapter_data[tostring(vnum)]
+        local vtext = chapter_data[vnum] or chapter_data[tostring(vnum)]
         local prefix = string.format("%3d  ", vnum)
         local continuation = "     "
         local wrapped = wrap_text(prefix .. vtext, text_width, continuation)
