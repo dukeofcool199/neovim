@@ -1,5 +1,6 @@
 {pkgs, ...}: {
   imports = [
+    ./colorscheme.nix
     ./treesitter.nix
     ./telescope.nix
     ./lualine.nix

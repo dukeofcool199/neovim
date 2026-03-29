@@ -46,6 +46,9 @@ in {
     # Colorschemes
     monokai-pro-nvim
     awesome-vim-colorschemes
+    catppuccin-nvim
+    tokyonight-nvim
+    kanagawa-nvim
 
     # Markdown
     vim-markdown
