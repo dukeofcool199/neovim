@@ -3,6 +3,7 @@
   plugins.which-key = {
     enable = true;
     settings = {
+      plugins.marks = false;
       spec = [
         # Top-level leader groups
         { __unkeyed-1 = "<leader>b"; group = "Buffer"; }
