@@ -23,6 +23,7 @@
         { __unkeyed-1 = "<leader>s"; group = "Split"; }
         { __unkeyed-1 = "<leader>t"; group = "Toggle/Tab"; }
         { __unkeyed-1 = "<leader>w"; group = "Workspace"; }
+        { __unkeyed-1 = "<leader>y"; group = "AI Yank"; }
         { __unkeyed-1 = "<leader>z"; group = "Zen"; }
         { __unkeyed-1 = "<leader><leader>"; group = "Hop"; }
       ];

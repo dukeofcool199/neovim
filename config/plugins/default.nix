@@ -30,5 +30,6 @@
     ./bookmarks.nix
     ./haskell-tools.nix
     ./scripture.nix
+    ./prompt-yank.nix
   ];
 }
