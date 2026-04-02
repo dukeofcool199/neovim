@@ -32,5 +32,6 @@
     ./haskell-tools.nix
     ./scripture.nix
     ./prompt-yank.nix
+    ./better-escape.nix
   ];
 }

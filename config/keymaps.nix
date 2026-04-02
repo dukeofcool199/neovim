@@ -35,19 +35,6 @@
       options = { silent = true; noremap = true; };
     }
 
-    # Quick escape from insert mode
-    {
-      mode = "i";
-      key = "jk";
-      action = "<esc>";
-      options = { silent = true; noremap = true; };
-    }
-    {
-      mode = "i";
-      key = "kj";
-      action = "<esc>";
-      options = { silent = true; noremap = true; };
-    }
 
     # Remap increment/decrement since C-a/C-x are used by OpenCode
     {
