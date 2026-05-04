@@ -50,6 +50,14 @@
       options = { silent = true; noremap = true; desc = "Decrement"; };
     }
 
+    # LSP hover (global fallback; Haskell overrides this buffer-locally via haskell-tools.nix)
+    {
+      mode = "n";
+      key = "gh";
+      action.__raw = "vim.lsp.buf.hover";
+      options = { silent = true; desc = "Hover (LSP)"; };
+    }
+
     # LSP restart
     {
       mode = "n";

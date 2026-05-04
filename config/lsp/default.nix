@@ -11,7 +11,6 @@
       lspBuf = {
         "gd" = "definition";
         "gD" = "declaration";
-        "gh" = "hover";
         "gi" = "implementation";
         "gr" = "references";
         "<C-k>" = "signature_help";

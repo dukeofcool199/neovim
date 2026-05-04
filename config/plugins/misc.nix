@@ -34,6 +34,20 @@
   plugins.project-nvim = {
     enable = true;
     enableTelescope = true;
+    settings = {
+      # Haskell markers first so sub-packages in a monorepo (e.g. NUR) are
+      # detected as the project root instead of the git root.  project-nvim
+      # uses innermost-match: it stops at the first directory going upward
+      # that contains any pattern, so *.cabal in airscout-buddy/ wins over
+      # .git at the NUR repo root.
+      patterns = [
+        "*.cabal" "cabal.project" "hie.yaml" "package.yaml" "stack.yaml"
+        ".git" ".github" "_darcs" ".hg" ".bzr" ".svn"
+        "Pipfile" "pyproject.toml"
+        ".pre-commit-config.yaml" ".pre-commit-config.yml"
+        ".csproj" ".sln" ".nvim.lua" ".neoconf.json" "neoconf.json"
+      ];
+    };
   };
 
   # Ledger accounting files
