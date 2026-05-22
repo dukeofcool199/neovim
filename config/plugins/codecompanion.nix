@@ -14,7 +14,8 @@
                     },
                     schema = {
                         model = {
-                            default = 'qwen3-coder:30b',
+                            default = 'qwen2.5-coder:7b',
+                            -- default = 'qwen3-coder:30b',
                             -- default = "llama3.1:8b-instruct-q8_0",
                         },
                         num_ctx = {
@@ -50,7 +51,7 @@
   keymaps = [
     {
       mode = "n";
-      key = "<leader>ca";
+      key = "<leader>cc";
       action = "<cmd>CodeCompanionChat<cr>";
       options = {desc = "Start chat";};
     }
@@ -62,7 +63,7 @@
     }
     {
       mode = "v";
-      key = "<leader>ca";
+      key = "<leader>cc";
       action = "<cmd>CodeCompanionChat<cr>";
       options = {desc = "Start chat with selection";};
     }
