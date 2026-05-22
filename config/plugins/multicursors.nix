@@ -1,5 +1,4 @@
-{ ... }:
-{
+{...}: {
   plugins.multicursors = {
     enable = true;
     settings = {
@@ -36,31 +35,46 @@
       mode = "n";
       key = "<leader>ms";
       action = "<cmd>MCstart<cr>";
-      options = { desc = "Start multi cursor"; silent = true; };
+      options = {
+        desc = "Start multi cursor";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>mp";
       action = "<cmd>MCpattern<cr>";
-      options = { desc = "Multi cursor pattern selection"; silent = true; };
+      options = {
+        desc = "Multi cursor pattern selection";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>mv";
       action = "<cmd>MCvisual<cr>";
-      options = { desc = "Multi cursor visual"; silent = true; };
+      options = {
+        desc = "Multi cursor visual";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>mc";
       action = "<cmd>MCclear<cr>";
-      options = { desc = "Clear cursor"; silent = true; };
+      options = {
+        desc = "Clear cursor";
+        silent = true;
+      };
     }
     {
       mode = "v";
-      key = "<leader>c";
+      key = "<leader>mv";
       action = "<cmd>MCvisual<cr>";
-      options = { desc = "Multi cursor visual"; silent = true; };
+      options = {
+        desc = "Multi cursor visual";
+        silent = true;
+      };
     }
   ];
 }
