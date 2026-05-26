@@ -27,6 +27,27 @@
             '';
           };
         };
+        acp = {
+          opencode = {
+            __raw = ''
+              function()
+                return require('codecompanion.adapters').extend('opencode', {
+                    defaults = {
+                        timeout = 20000,
+                        session_config_options = {
+                            model = "openai/gpt-4o",
+                        },
+                    },
+                })
+              end
+            '';
+          };
+        };
+      };
+      display = {
+        chat = {
+          show_settings = false;
+        };
       };
       opts = {
         log_level = "TRACE";
@@ -36,10 +57,10 @@
       };
       strategies = {
         agent = {
-          adapter = "ollama";
+          adapter = "opencode";
         };
         chat = {
-          adapter = "ollama";
+          adapter = "opencode";
         };
         inline = {
           adapter = "ollama";
@@ -53,13 +74,25 @@
       mode = ["n" "v"];
       key = "<leader>cc";
       action = "<cmd>CodeCompanionChat<cr>";
-      options = {desc = "Start chat";};
+      options = {desc = "Chat (default adapter)";};
+    }
+    {
+      mode = ["n" "v"];
+      key = "<leader>co";
+      action = "<cmd>CodeCompanionChat opencode<cr>";
+      options = {desc = "Chat (opencode/OpenAI)";};
+    }
+    {
+      mode = ["n" "v"];
+      key = "<leader>cl";
+      action = "<cmd>CodeCompanionChat ollama<cr>";
+      options = {desc = "Chat (ollama/local)";};
     }
     {
       mode = ["n" "v"];
       key = "<leader>ce";
       action = ":CodeCompanion ";
-      options = {desc = "Edit code";};
+      options = {desc = "Inline edit";};
     }
   ];
 }
