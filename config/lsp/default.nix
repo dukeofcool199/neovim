@@ -212,6 +212,11 @@
       clangd = {
         enable = true;
       };
+
+      # Arduino
+      arduino_language_server = {
+        enable = true;
+      };
     };
   };
 

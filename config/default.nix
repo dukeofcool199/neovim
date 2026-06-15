@@ -17,6 +17,7 @@
     nixd
     templ
     cue
+    arduino-language-server
 
     # Formatters
     nixfmt
