@@ -18,6 +18,9 @@
 
         nix = ["alejandra"];
         lua = ["stylua"];
+
+        c = ["clang-format"];
+        cpp = ["clang-format"];
       };
     };
   };
@@ -26,5 +29,6 @@
     nodejs
     alejandra
     stylua
+    clang-tools
   ];
 }
