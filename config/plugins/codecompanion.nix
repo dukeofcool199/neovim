@@ -14,15 +14,18 @@
         use_default_actions = true;
         use_default_prompts = true;
       };
-      strategies = {
+      interactions = {
         agent = {
           adapter = "opencode";
         };
         chat = {
           adapter = "opencode";
         };
+        # NOTE: opencode is an ACP (Agent Client Protocol) adapter.
+        # CodeCompanion's inline interaction requires an HTTP adapter.
+        # Using copilot as the fallback for inline edits.
         inline = {
-          adapter = "opencode";
+          adapter = "copilot";
         };
       };
     };
