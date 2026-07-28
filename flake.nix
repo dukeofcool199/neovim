@@ -20,7 +20,10 @@
     forAllSystems = nixpkgs.lib.genAttrs systems;
   in {
     packages = forAllSystems (system: let
-      pkgs = nixpkgs.legacyPackages.${system};
+      pkgs = import nixpkgs {
+        inherit system;
+        config = {allowUnfree = true;};
+      };
       nixvim' = nixvim.legacyPackages.${system};
       gitRev =
         if self ? rev

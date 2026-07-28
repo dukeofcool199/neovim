@@ -11,10 +11,10 @@
       };
 
       formatters_by_ft = {
-        javascript = ["standardjs"];
-        javascriptreact = ["standardjs"];
-        typescript = ["standardjs"];
-        typescriptreact = ["standardjs"];
+        javascript = ["prettier"];
+        javascriptreact = ["prettier"];
+        typescript = ["prettier"];
+        typescriptreact = ["prettier"];
 
         nix = ["alejandra"];
         lua = ["stylua"];
