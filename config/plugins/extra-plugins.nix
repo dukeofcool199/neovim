@@ -25,9 +25,6 @@
   };
 in {
   extraPlugins = with pkgs.vimPlugins; [
-    # Utility
-    vim-bufkill
-
     # Custom plugins (no config needed)
     spongebob
     prr
