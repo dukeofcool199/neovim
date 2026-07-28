@@ -31,9 +31,6 @@
 
     # Node
     nodejs_24
-    nodePackages.tailwindcss
+    tailwindcss
   ];
-
-  # Custom colorscheme
-  colorschemes.monokai-pro = {enable = true;};
 }

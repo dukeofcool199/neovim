@@ -37,18 +37,12 @@ in {
 
     # LSP utilities
     lsp-colors-nvim
+
     nvim-jdtls
     neoformat
 
     # Writing
     vim-pencil
-
-    # Colorschemes
-    monokai-pro-nvim
-    awesome-vim-colorschemes
-    catppuccin-nvim
-    tokyonight-nvim
-    kanagawa-nvim
 
     # Markdown
     vim-markdown

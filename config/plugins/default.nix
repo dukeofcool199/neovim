@@ -13,7 +13,6 @@
     ./gitsigns.nix
     ./which-key.nix
     ./toggleterm.nix
-    ./indent-blankline.nix
     ./todo-comments.nix
     ./zen-mode.nix
     ./twilight.nix
