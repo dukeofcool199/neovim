@@ -60,6 +60,22 @@
             '';
             color = { fg = "#d4a959"; };
           }
+          {
+            __unkeyed-1.__raw = ''
+              function()
+                if _G.ninetynine_lualine_model then
+                  return _G.ninetynine_lualine_model()
+                end
+                return ""
+              end
+            '';
+            color = { fg = "#d4a959"; };
+            cond.__raw = ''
+              function()
+                return vim.o.columns > 80
+              end
+            '';
+          }
         ];
         lualine_y = [ "filetype" "progress" ];
         lualine_z = [

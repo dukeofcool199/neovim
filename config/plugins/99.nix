@@ -25,7 +25,7 @@ in {
 
     _99.setup({
       provider = _99.Providers.OpenCodeProvider,
-      model = "opencode-go/kimi-k2.7-code",
+      model = "opencode-go/deepseek-v4-flash",
       logger = {
         level = _99.DEBUG,
         path = "/tmp/" .. basename .. ".99.debug",
@@ -55,6 +55,36 @@ in {
         "AGENT.md",
       },
     })
+
+    -- Statusline helper for the active 99 model
+    _G.ninetynine_lualine_model = function()
+      local ok, model = pcall(_99.get_model)
+      if not ok or not model or model == "" then
+        return ""
+      end
+      return "󰚩 " .. model
+    end
+
+    local function refresh_lualine()
+      local ok, lualine = pcall(require, "lualine")
+      if ok then
+        lualine.refresh()
+      end
+    end
+
+    local orig_set_model = _99.set_model
+    _99.set_model = function(model)
+      local res = orig_set_model(model)
+      refresh_lualine()
+      return res
+    end
+
+    local orig_set_provider = _99.set_provider
+    _99.set_provider = function(provider)
+      local res = orig_set_provider(provider)
+      refresh_lualine()
+      return res
+    end
   '';
 
   keymaps = [

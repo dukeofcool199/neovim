@@ -20,6 +20,7 @@
     ./conform.nix
     ./multicursors.nix
     ./misc.nix
+    ./exrc.nix
     ./extra-plugins.nix
     ./jj.nix
     ./octo.nix

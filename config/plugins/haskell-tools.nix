@@ -92,7 +92,7 @@
         vim.keymap.set("n", "<leader>he", vim.lsp.codelens.run, opts("Eval Code Lens"))
 
         -- HLS restart
-        vim.keymap.set("n", "<leader>hR", ht.lsp.restart, opts("Restart HLS"))
+        vim.keymap.set("n", "<leader>hR", "<cmd>Haskell hls restart<cr>", opts("Restart HLS"))
       end,
     })
   '';
