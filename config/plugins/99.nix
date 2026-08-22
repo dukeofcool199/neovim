@@ -1,58 +1,4 @@
 {pkgs, ...}: let
-  opencodeVersion = "1.18.21";
-
-  opencode = let
-    platform = pkgs.stdenv.hostPlatform.system;
-    sources = {
-      x86_64-linux = {
-        pname = "opencode-linux-x64";
-        sha256 = "0mr9q4zywqwx0bnm67zysyqwkpbnbp0d4hjf16q004bgw96zzncj";
-      };
-      aarch64-linux = {
-        pname = "opencode-linux-arm64";
-        sha256 = "05kqr755ggd1nzlxdmya1vnx67lxcfwqa7p8sc7d7w0kqcbsgyvc";
-      };
-      x86_64-darwin = {
-        pname = "opencode-darwin-x64";
-        sha256 = "0dsva0xcnlrk49irxh9arc74d7ag3hm9wyvq3nkp0740r6g63wgl";
-      };
-      aarch64-darwin = {
-        pname = "opencode-darwin-arm64";
-        sha256 = "1plqs4w86c56fny3bh5r72lkb3y5gj9qb3c1h2zawnivsadpk603";
-      };
-    };
-    source =
-      sources.${platform}
-      or (throw "99: opencode is not available for ${platform}");
-  in
-    pkgs.stdenvNoCC.mkDerivation {
-      pname = "opencode";
-      version = opencodeVersion;
-
-      src = pkgs.fetchurl {
-        url = "https://registry.npmjs.org/${source.pname}/-/${source.pname}-${opencodeVersion}.tgz";
-        inherit (source) sha256;
-      };
-
-      sourceRoot = ".";
-
-      nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [pkgs.autoPatchelfHook];
-
-      buildInputs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [pkgs.glibc];
-
-      installPhase = ''
-        mkdir -p $out/bin
-        install -m755 package/bin/opencode $out/bin/opencode
-      '';
-
-      dontStrip = true;
-
-      meta = {
-        description = "OpenCode AI coding agent CLI";
-        homepage = "https://opencode.ai";
-      };
-    };
-
   plugin-99 = pkgs.vimUtils.buildVimPlugin {
     name = "99";
     src = pkgs.fetchFromGitHub {
@@ -67,7 +13,7 @@
 in {
   extraPlugins = [plugin-99];
 
-  extraPackages = [opencode];
+  extraPackages = [pkgs.opencode];
 
   extraConfigLua = ''
     local _99 = require("99")
