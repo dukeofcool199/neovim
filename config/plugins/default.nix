@@ -9,6 +9,7 @@
     ./oil.nix
     ./trouble.nix
     ./hop.nix
+    ./quickfix.nix
     ./gitsigns.nix
     ./which-key.nix
     ./toggleterm.nix

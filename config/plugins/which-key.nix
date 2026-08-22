@@ -18,6 +18,7 @@
         { __unkeyed-1 = "<leader>o"; group = "Octo (GitHub)"; }
         { __unkeyed-1 = "<leader>or"; group = "Review"; }
         { __unkeyed-1 = "<leader>os"; group = "Submit"; }
+        { __unkeyed-1 = "<leader>q"; group = "Quickfix"; }
         { __unkeyed-1 = "<leader>S"; group = "Scripture"; }
         { __unkeyed-1 = "<leader>s"; group = "Split"; }
         { __unkeyed-1 = "<leader>t"; group = "Toggle/Tab"; }
