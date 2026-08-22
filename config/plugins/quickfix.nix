@@ -432,7 +432,7 @@
     {
       mode = "n";
       key = "<leader>qg";
-      action = "<cmd>Cgrep<space>";
+      action.__raw = ''function() local p = vim.fn.input("Grep to quickfix: ") if p ~= "" then vim.cmd("Cgrep " .. p) end end'';
       options = { desc = "Grep to quickfix"; silent = true; };
     }
     {
@@ -456,25 +456,25 @@
     {
       mode = "n";
       key = "<leader>qs";
-      action = "<cmd>Csave<space>";
+      action.__raw = ''function() local n = vim.fn.input("Save quickfix list: ") if n ~= "" then vim.cmd({ cmd = "Csave", args = { n } }) end end'';
       options = { desc = "Save quickfix list"; silent = true; };
     }
     {
       mode = "n";
       key = "<leader>qr";
-      action = "<cmd>Cload<space>";
+      action.__raw = ''function() local n = vim.fn.input("Restore quickfix list: ") if n ~= "" then vim.cmd({ cmd = "Cload", args = { n } }) end end'';
       options = { desc = "Restore quickfix list"; silent = true; };
     }
     {
       mode = "n";
       key = "<leader>qS";
-      action = "<cmd>Lsave<space>";
+      action.__raw = ''function() local n = vim.fn.input("Save location list: ") if n ~= "" then vim.cmd({ cmd = "Lsave", args = { n } }) end end'';
       options = { desc = "Save location list"; silent = true; };
     }
     {
       mode = "n";
       key = "<leader>qR";
-      action = "<cmd>Lload<space>";
+      action.__raw = ''function() local n = vim.fn.input("Restore location list: ") if n ~= "" then vim.cmd({ cmd = "Lload", args = { n } }) end end'';
       options = { desc = "Restore location list"; silent = true; };
     }
     {
@@ -498,13 +498,13 @@
     {
       mode = "n";
       key = "<leader>qx";
-      action = "<cmd>Cdo<space>";
+      action.__raw = ''function() local c = vim.fn.input("Cdo: ") if c ~= "" then vim.cmd("Cdo " .. c) end end'';
       options = { desc = "Run command on each item"; silent = true; };
     }
     {
       mode = "n";
       key = "<leader>qX";
-      action = "<cmd>Cfdo<space>";
+      action.__raw = ''function() local c = vim.fn.input("Cfdo: ") if c ~= "" then vim.cmd("Cfdo " .. c) end end'';
       options = { desc = "Run command on each file"; silent = true; };
     }
     {
