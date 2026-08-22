@@ -36,10 +36,16 @@
 
       sourceRoot = ".";
 
+      nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [pkgs.autoPatchelfHook];
+
+      buildInputs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [pkgs.glibc];
+
       installPhase = ''
         mkdir -p $out/bin
         install -m755 package/bin/opencode $out/bin/opencode
       '';
+
+      dontStrip = true;
 
       meta = {
         description = "OpenCode AI coding agent CLI";
