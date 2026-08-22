@@ -22,6 +22,7 @@ in {
 
     _99.setup({
       provider = _99.Providers.OpenCodeProvider,
+      model = "kimi-k2.7-code",
       logger = {
         level = _99.DEBUG,
         path = "/tmp/" .. basename .. ".99.debug",
@@ -104,6 +105,34 @@ in {
       '';
       options = {
         desc = "99: view logs";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>9m";
+      action.__raw = ''
+        function()
+          require("99.extensions.telescope").select_model()
+        end
+      '';
+      options = {
+        desc = "99: select model (telescope)";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>9p";
+      action.__raw = ''
+        function()
+          require("99.extensions.telescope").select_provider()
+        end
+      '';
+      options = {
+        desc = "99: select provider (telescope)";
         silent = true;
         noremap = true;
       };
