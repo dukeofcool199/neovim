@@ -13,13 +13,11 @@
         { __unkeyed-1 = "<leader>g"; group = "Git"; }
         { __unkeyed-1 = "<leader>h"; group = "Haskell"; }
         { __unkeyed-1 = "<leader>j"; group = "Jujutsu"; }
-        { __unkeyed-1 = "<leader>l"; group = "Harpoon List"; }
         { __unkeyed-1 = "<leader>m"; group = "Multi Cursor"; }
         { __unkeyed-1 = "<leader>n"; group = "New"; }
         { __unkeyed-1 = "<leader>o"; group = "Octo (GitHub)"; }
         { __unkeyed-1 = "<leader>or"; group = "Review"; }
         { __unkeyed-1 = "<leader>os"; group = "Submit"; }
-        { __unkeyed-1 = "<leader>q"; group = "Quit"; }
         { __unkeyed-1 = "<leader>S"; group = "Scripture"; }
         { __unkeyed-1 = "<leader>s"; group = "Split"; }
         { __unkeyed-1 = "<leader>t"; group = "Toggle/Tab"; }

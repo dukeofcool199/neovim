@@ -127,42 +127,5 @@
       };
     }
 
-    # Quit keymaps
-    {
-      mode = "n";
-      key = "<leader>qQ";
-      action = "<cmd>q!<cr>";
-      options = {
-        desc = "Force Quit";
-        silent = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>qa";
-      action = "<cmd>qa!<cr>";
-      options = {
-        desc = "Force Quit All";
-        silent = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>qw";
-      action = "<cmd>wa<cr><cmd>q!<cr>";
-      options = {
-        desc = "Save and Quit";
-        silent = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>qq";
-      action = "<cmd>q<cr>";
-      options = {
-        desc = "Close buffer";
-        silent = true;
-      };
-    }
   ];
 }
