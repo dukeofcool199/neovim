@@ -106,13 +106,13 @@
       pattern = "qf",
       callback = function(args)
         local buf = args.buf
-        local map = function(keys, action, desc)
-          vim.keymap.set("n", keys, action, { buffer = buf, silent = true, noremap = true, desc = desc })
-        end
-
         local winid = vim.fn.win_getid()
         local info = vim.fn.getwininfo(winid)[1] or {}
         local is_loc = info.loclist == 1
+
+        local map = function(keys, action, desc)
+          vim.keymap.set("n", keys, action, { buffer = buf, silent = true, noremap = true, desc = desc })
+        end
 
         map("q", is_loc and "<cmd>lclose<cr>" or "<cmd>cclose<cr>", "Close list")
         map("r", function()
@@ -225,6 +225,52 @@
       vim.cmd("silent grep! " .. opts.args)
       vim.cmd("copen")
     end, { nargs = "+", complete = "file" })
+
+    -- Auto-open quickfix after :grep/:make/:vimgrep/:helpgrep if results exist
+    vim.api.nvim_create_autocmd("QuickFixCmdPost", {
+      pattern = { "grep", "make", "vimgrep", "helpgrep" },
+      callback = function()
+        if #vim.fn.getqflist() > 0 then
+          vim.cmd("copen")
+        end
+      end,
+    })
+
+    -- Load a jj diff summary into the quickfix list
+    vim.api.nvim_create_user_command("JjQf", function(opts)
+      local revset = opts.args ~= "" and opts.args or "@"
+      local cmd = "jj diff --summary -r " .. vim.fn.shellescape(revset)
+      local output = vim.fn.system(cmd)
+      if vim.v.shell_error ~= 0 then
+        vim.notify("jj diff failed: " .. output, vim.log.levels.ERROR)
+        return
+      end
+
+      local items = {}
+      for _, line in ipairs(vim.split(output, "\n", { plain = true })) do
+        local status, path = line:match("^([MADR])%s+(.+)$")
+        if status and path then
+          if status == "R" then
+            local new_path = path:match("^.+%s+→%s+(.+)$")
+            if new_path then
+              path = vim.trim(new_path)
+            end
+          end
+          table.insert(items, {
+            filename = path,
+            lnum = 1,
+            text = status .. " " .. path,
+          })
+        end
+      end
+
+      vim.fn.setqflist({}, "r", { items = items, title = "jj diff " .. revset })
+      if #items > 0 then
+        vim.cmd("copen")
+      else
+        vim.notify("No changed files for revset: " .. revset, vim.log.levels.INFO)
+      end
+    end, { nargs = "?", complete = "file" })
   '';
 
   keymaps = [
@@ -305,6 +351,12 @@
       key = "<leader>qg";
       action = "<cmd>Cgrep<space>";
       options = { desc = "Grep to quickfix"; silent = true; };
+    }
+    {
+      mode = "n";
+      key = "<leader>qj";
+      action = "<cmd>JjQf<cr>";
+      options = { desc = "jj diff to quickfix"; silent = true; };
     }
     {
       mode = "n";
