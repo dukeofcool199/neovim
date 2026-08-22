@@ -467,6 +467,18 @@
     }
     {
       mode = "n";
+      key = "<leader>qS";
+      action = "<cmd>Lsave<space>";
+      options = { desc = "Save location list"; silent = true; };
+    }
+    {
+      mode = "n";
+      key = "<leader>qR";
+      action = "<cmd>Lload<space>";
+      options = { desc = "Restore location list"; silent = true; };
+    }
+    {
+      mode = "n";
       key = "<leader>qy";
       action = "<cmd>chistory<cr>";
       options = { desc = "Quickfix history"; silent = true; };
