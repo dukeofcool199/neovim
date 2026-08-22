@@ -7,6 +7,7 @@
       rev = "c17422457027c913c76c75a921fca1e623d2678e";
       sha256 = "0jnbjgcvw72z0xjqngkc941wva9rv7ybqaldxlpp541mdy46jaca";
     };
+    patches = [./patches/99-opencode-fix.patch];
     doCheck = false;
   };
 in {

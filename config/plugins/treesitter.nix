@@ -1,14 +1,13 @@
-{ ... }:
-{
+{...}: {
   plugins.treesitter = {
     enable = true;
 
+    indent = {
+      enable = true;
+      disable = ["haskell"];
+    };
     settings = {
       highlight.enable = true;
-      indent = {
-        enable = true;
-        disable = ["haskell"];
-      };
     };
   };
 
