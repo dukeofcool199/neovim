@@ -67,6 +67,20 @@
           border = "rounded",
           show_title = true,
           show_scroll_bar = true,
+          win_height = 15,
+          win_vheight = 15,
+          delay_syntax = 80,
+          should_preview_cb = function(bufnr, qwinid)
+            local bufname = vim.api.nvim_buf_get_name(bufnr)
+            local fsize = vim.fn.getfsize(bufname)
+            if fsize > 500 * 1024 then
+              return false
+            end
+            if bufname:match("^fugitive://") or bufname:match("^jj://") or bufname:match("^diffview://") then
+              return false
+            end
+            return true
+          end,
         },
         func_map = {
           open = "<CR>",
@@ -140,46 +154,55 @@
       end,
     })
 
-    -- Save/load named quickfix lists
-    local function qf_path(name)
-      return vim.fn.stdpath("data") .. "/qf/" .. name .. ".json"
+    -- Save/load named quickfix and location lists
+    local function list_path(scope, name)
+      return vim.fn.stdpath("data") .. "/" .. scope .. "/" .. name .. ".json"
     end
 
-    local function qf_save(name)
-      local list = vim.fn.getqflist()
-      local path = qf_path(name)
+    local function list_save(scope, name)
+      local is_loc = scope == "l"
+      local list = is_loc and vim.fn.getloclist(0) or vim.fn.getqflist()
+      local path = list_path(scope, name)
       vim.fn.mkdir(vim.fn.fnamemodify(path, ":h"), "p")
       local f = io.open(path, "w")
       if f then
         f:write(vim.fn.json_encode(list))
         f:close()
-        vim.notify("Saved quickfix list: " .. name)
+        vim.notify("Saved " .. (is_loc and "location" or "quickfix") .. " list: " .. name)
       else
-        vim.notify("Failed to save quickfix list: " .. name, vim.log.levels.ERROR)
+        vim.notify("Failed to save " .. (is_loc and "location" or "quickfix") .. " list: " .. name, vim.log.levels.ERROR)
       end
     end
 
-    local function qf_load(name)
-      local path = qf_path(name)
+    local function list_load(scope, name)
+      local is_loc = scope == "l"
+      local path = list_path(scope, name)
       local f = io.open(path, "r")
       if not f then
-        vim.notify("No saved quickfix list: " .. name, vim.log.levels.ERROR)
+        vim.notify("No saved " .. (is_loc and "location" or "quickfix") .. " list: " .. name, vim.log.levels.ERROR)
         return
       end
       local content = f:read("*a")
       f:close()
       local ok, list = pcall(vim.fn.json_decode, content)
       if not ok or type(list) ~= "table" then
-        vim.notify("Failed to decode quickfix list: " .. name, vim.log.levels.ERROR)
+        vim.notify("Failed to decode " .. (is_loc and "location" or "quickfix") .. " list: " .. name, vim.log.levels.ERROR)
         return
       end
-      vim.fn.setqflist(list)
-      vim.cmd("copen")
-      vim.notify("Loaded quickfix list: " .. name)
+      if is_loc then
+        vim.fn.setloclist(0, list)
+        vim.cmd("lopen")
+      else
+        vim.fn.setqflist(list)
+        vim.cmd("copen")
+      end
+      vim.notify("Loaded " .. (is_loc and "location" or "quickfix") .. " list: " .. name)
     end
 
-    vim.api.nvim_create_user_command("Csave", function(opts) qf_save(opts.args) end, { nargs = 1 })
-    vim.api.nvim_create_user_command("Cload", function(opts) qf_load(opts.args) end, { nargs = 1 })
+    vim.api.nvim_create_user_command("Csave", function(opts) list_save("c", opts.args) end, { nargs = 1 })
+    vim.api.nvim_create_user_command("Cload", function(opts) list_load("c", opts.args) end, { nargs = 1 })
+    vim.api.nvim_create_user_command("Lsave", function(opts) list_save("l", opts.args) end, { nargs = 1 })
+    vim.api.nvim_create_user_command("Lload", function(opts) list_load("l", opts.args) end, { nargs = 1 })
     vim.api.nvim_create_user_command("Cdelete", function() vim.fn.setqflist({}) end, {})
     vim.api.nvim_create_user_command("Ldelete", function() vim.fn.setloclist(0, {}) end, {})
 
@@ -219,6 +242,42 @@
     vim.api.nvim_create_user_command("Lfdo", function(opts)
       guarded_do("lfdo " .. opts.args, "l")
     end, { nargs = "+" })
+
+    -- Wrap-around navigation
+    local function qf_next(scope)
+      local is_loc = scope == "l"
+      local getinfo = is_loc and function() return vim.fn.getloclist(0, { idx = 0 }) end or function() return vim.fn.getqflist({ idx = 0 }) end
+      local before = getinfo().idx
+      local ok = pcall(vim.cmd, is_loc and "lnext" or "cnext")
+      if not ok then
+        pcall(vim.cmd, is_loc and "lrewind" or "crewind")
+        return
+      end
+      local after = getinfo().idx
+      if after <= before then
+        pcall(vim.cmd, is_loc and "lrewind" or "crewind")
+      end
+    end
+
+    local function qf_prev(scope)
+      local is_loc = scope == "l"
+      local getinfo = is_loc and function() return vim.fn.getloclist(0, { idx = 0 }) end or function() return vim.fn.getqflist({ idx = 0 }) end
+      local before = getinfo().idx
+      local ok = pcall(vim.cmd, is_loc and "lprev" or "cprev")
+      if not ok then
+        pcall(vim.cmd, is_loc and "llast" or "clast")
+        return
+      end
+      local after = getinfo().idx
+      if after >= before then
+        pcall(vim.cmd, is_loc and "llast" or "clast")
+      end
+    end
+
+    vim.api.nvim_create_user_command("Cnext", function() qf_next("c") end, {})
+    vim.api.nvim_create_user_command("Cprev", function() qf_prev("c") end, {})
+    vim.api.nvim_create_user_command("Lnext", function() qf_next("l") end, {})
+    vim.api.nvim_create_user_command("Lprev", function() qf_prev("l") end, {})
 
     -- Grep to quickfix
     vim.api.nvim_create_user_command("Cgrep", function(opts)
@@ -313,26 +372,50 @@
     {
       mode = "n";
       key = "<leader>qn";
-      action = "<cmd>cnext<cr>";
-      options = { desc = "Next quickfix item"; silent = true; };
+      action = "<cmd>Cnext<cr>";
+      options = { desc = "Next quickfix item (wrap)"; silent = true; };
     }
     {
       mode = "n";
       key = "<leader>qp";
-      action = "<cmd>cprev<cr>";
-      options = { desc = "Previous quickfix item"; silent = true; };
+      action = "<cmd>Cprev<cr>";
+      options = { desc = "Previous quickfix item (wrap)"; silent = true; };
     }
     {
       mode = "n";
       key = "<leader>qN";
-      action = "<cmd>lnext<cr>";
-      options = { desc = "Next location item"; silent = true; };
+      action = "<cmd>Lnext<cr>";
+      options = { desc = "Next location item (wrap)"; silent = true; };
     }
     {
       mode = "n";
       key = "<leader>qP";
-      action = "<cmd>lprev<cr>";
-      options = { desc = "Previous location item"; silent = true; };
+      action = "<cmd>Lprev<cr>";
+      options = { desc = "Previous location item (wrap)"; silent = true; };
+    }
+    {
+      mode = "n";
+      key = "]q";
+      action = "<cmd>Cnext<cr>";
+      options = { desc = "Next quickfix item (wrap)"; silent = true; };
+    }
+    {
+      mode = "n";
+      key = "[q";
+      action = "<cmd>Cprev<cr>";
+      options = { desc = "Previous quickfix item (wrap)"; silent = true; };
+    }
+    {
+      mode = "n";
+      key = "]l";
+      action = "<cmd>Lnext<cr>";
+      options = { desc = "Next location item (wrap)"; silent = true; };
+    }
+    {
+      mode = "n";
+      key = "[l";
+      action = "<cmd>Lprev<cr>";
+      options = { desc = "Previous location item (wrap)"; silent = true; };
     }
     {
       mode = "n";
@@ -351,6 +434,18 @@
       key = "<leader>qg";
       action = "<cmd>Cgrep<space>";
       options = { desc = "Grep to quickfix"; silent = true; };
+    }
+    {
+      mode = "n";
+      key = "<leader>qt";
+      action = "<cmd>Telescope quickfix<cr>";
+      options = { desc = "Telescope quickfix"; silent = true; };
+    }
+    {
+      mode = "n";
+      key = "<leader>qT";
+      action = "<cmd>Telescope loclist<cr>";
+      options = { desc = "Telescope loclist"; silent = true; };
     }
     {
       mode = "n";
