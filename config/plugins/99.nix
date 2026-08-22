@@ -7,7 +7,10 @@
       rev = "c17422457027c913c76c75a921fca1e623d2678e";
       sha256 = "0jnbjgcvw72z0xjqngkc941wva9rv7ybqaldxlpp541mdy46jaca";
     };
-    patches = [./patches/99-opencode-fix.patch];
+    patches = [
+      ./patches/99-opencode-fix.patch
+      ./patches/99-skills.patch
+    ];
     doCheck = false;
   };
 in {
@@ -31,7 +34,23 @@ in {
       tmp_dir = "./tmp",
       completion = {
         source = "native",
+        -- Directories of <skill>/SKILL.md files.
+        -- The 99-skills patch auto-includes these in every prompt context.
+        custom_rules = {
+          -- Global skills available in every project.
+          vim.fn.expand("~/.claude/skills"),
+          vim.fn.expand("~/.pi/agent/skills"),
+          vim.fn.expand("~/.config/99/skills"),
+          -- Project-specific skills resolved relative to cwd.
+          ".claude/skills",
+          ".pi/skills",
+          ".pi/agent/skills",
+          ".99/skills",
+          "skills",
+        },
       },
+      -- Automatically inject all custom_rules skills into each prompt.
+      auto_add_skills = true,
       md_files = {
         "AGENT.md",
       },

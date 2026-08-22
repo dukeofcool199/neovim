@@ -1,0 +1,65 @@
+diff --git a/lua/99/init.lua b/lua/99/init.lua
+index e69de29..1111111 100644
+--- a/lua/99/init.lua
++++ b/lua/99/init.lua
+@@ -456,6 +456,7 @@ function _99.setup(opts)
+   _99_state.__tmp_dir = opts.tmp_dir
+ 
+   _99_state.display_errors = opts.display_errors or false
++  _99_state.auto_add_skills = opts.auto_add_skills or false
+   _99_state:refresh_rules()
+   Extensions.init(_99_state)
+   Extensions.capture_project_root()
+
+diff --git a/lua/99/prompt.lua b/lua/99/prompt.lua
+index e69de29..2222222 100644
+--- a/lua/99/prompt.lua
++++ b/lua/99/prompt.lua
+@@ -5,6 +5,7 @@ local BaseProvider = require("99.providers")
+ local Logger = require("99.logger.logger")
+ local utils = require("99.utils")
+ local random_file = utils.random_file
++local Agents = require("99.extensions.agents")
+ local copy = utils.copy
+ local get_id = require("99.id")
+ local Range = require("99.geo").Range
+@@ -447,6 +448,26 @@ function Prompt:_read_md_files()
+ 
+     dir = vim.fn.fnamemodify(dir, ":h")
+   end
++
++  if self._99.auto_add_skills then
++    local Helpers = require("99.extensions.agents.helpers")
++    for _, rule_dir in ipairs(self._99.completion.custom_rules or {}) do
++      local rules = Helpers.ls(rule_dir)
++      for _, rule in ipairs(rules) do
++        local content = Agents.get_rule_content(rule)
++        if content then
++          self.logger:info(
++            "Context#adding skill to the context",
++            "skill",
++            rule.name,
++            "path",
++            rule.path
++          )
++          table.insert(self.agent_context, content)
++        end
++      end
++    end
++  end
+ end
+ 
+ --- @return string[]
+
+diff --git a/lua/99/state.lua b/lua/99/state.lua
+index e69de29..3333333 100644
+--- a/lua/99/state.lua
++++ b/lua/99/state.lua
+@@ -49,6 +49,7 @@ local function create()
+     md_files = {},
+     ai_stdout_rows = 3,
+     display_errors = false,
++    auto_add_skills = false,
+     provider_override = nil,
+     tmp_dir = nil,
+   }
