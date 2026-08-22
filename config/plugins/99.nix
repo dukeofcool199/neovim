@@ -22,7 +22,7 @@ in {
 
     _99.setup({
       provider = _99.Providers.OpenCodeProvider,
-      model = "kimi-k2.7-code",
+      model = "opencode-go/kimi-k2.7-code",
       logger = {
         level = _99.DEBUG,
         path = "/tmp/" .. basename .. ".99.debug",
