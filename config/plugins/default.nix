@@ -33,5 +33,6 @@
     ./scripture.nix
     ./prompt-yank.nix
     ./better-escape.nix
+    ./99.nix
   ];
 }
