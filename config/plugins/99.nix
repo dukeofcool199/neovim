@@ -145,6 +145,91 @@ in {
       require("99")[fn]()
     end
 
+    -- Project-local API. A requireable module so editor-native exrc files
+    -- (.nvim.lua in a project root, enabled via opts.exrc) can set models per
+    -- project. exrc runs after this config, so the module is ready by then:
+    --
+    --   -- .nvim.lua
+    --   require("ninetynine").set_models({
+    --     edit   = "openai/gpt-5.6-fast",
+    --     search = "openai/gpt-5.6-pro",
+    --   })
+    --
+    -- Mutates the single source of truth (_G.ninetynine_models) that the
+    -- keymaps and picker already use. Validation warns rather than errors so a
+    -- typo in a project file never breaks startup. Note: .nvim.lua is executable
+    -- Lua and must be :trust-ed on first open.
+    package.preload["ninetynine"] = function()
+      local M = {}
+      local VALID = { edit = true, search = true }
+
+      local function set(ctx, id)
+        if type(id) ~= "string" or id == "" then
+          vim.notify(
+            "ninetynine: " .. ctx .. " model must be a non-empty string",
+            vim.log.levels.WARN
+          )
+          return
+        end
+        if not id:find("/", 1, true) then
+          vim.notify(
+            "ninetynine: '" .. id .. "' is not a 'provider/model' id",
+            vim.log.levels.WARN
+          )
+        end
+        _G.ninetynine_models[ctx] = id
+        refresh_lualine()
+      end
+
+      --- @param cfg { edit?: string, search?: string }
+      function M.set_models(cfg)
+        if type(cfg) ~= "table" then
+          vim.notify(
+            "ninetynine.set_models: expected a table",
+            vim.log.levels.ERROR
+          )
+          return
+        end
+        for k in pairs(cfg) do
+          if not VALID[k] then
+            vim.notify(
+              "ninetynine.set_models: unknown key '"
+                .. tostring(k)
+                .. "' (want edit/search)",
+              vim.log.levels.WARN
+            )
+          end
+        end
+        if cfg.edit ~= nil then
+          set("edit", cfg.edit)
+        end
+        if cfg.search ~= nil then
+          set("search", cfg.search)
+        end
+        return M.get_models()
+      end
+
+      function M.set_edit(id)
+        set("edit", id)
+        return M.get_models()
+      end
+
+      function M.set_search(id)
+        set("search", id)
+        return M.get_models()
+      end
+
+      function M.get_models()
+        return vim.deepcopy(_G.ninetynine_models)
+      end
+
+      function M.pick(ctx)
+        _G.ninetynine_pick_model(ctx or "edit")
+      end
+
+      return M
+    end
+
     -- Statusline helper: show both context models (short form, provider stripped)
     _G.ninetynine_lualine_model = function()
       local m = _G.ninetynine_models or {}
