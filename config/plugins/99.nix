@@ -23,9 +23,29 @@ in {
     local cwd = vim.uv.cwd()
     local basename = vim.fs.basename(cwd)
 
+    -- Two models are tracked independently at runtime, one per context:
+    --   * edit   -> visual replacement. gpt-5.6-fast: low latency -> snappy
+    --               edits / quick agent loops.
+    --   * search -> project search. gpt-5.6-pro: strongest reasoning -> synthesis
+    --               and multi-step analysis.
+    -- Both resolve through opencode (ChatGPT Pro auth); no provider injection.
+    -- Each is chosen live from `opencode models` via <leader>9m / <leader>9M and
+    -- both are shown in the statusline. These are the startup defaults:
+    _G.ninetynine_models = _G.ninetynine_models or {
+      edit = "openai/gpt-5.5",
+      search = "openai/gpt-5.5",
+    }
+
+    local function refresh_lualine()
+      local ok, lualine = pcall(require, "lualine")
+      if ok then
+        lualine.refresh()
+      end
+    end
+
     _99.setup({
       provider = _99.Providers.OpenCodeProvider,
-      model = "opencode-go/deepseek-v4-flash",
+      model = _G.ninetynine_models.edit,
       logger = {
         level = _99.DEBUG,
         path = "/tmp/" .. basename .. ".99.debug",
@@ -56,20 +76,82 @@ in {
       },
     })
 
-    -- Statusline helper for the active 99 model
-    _G.ninetynine_lualine_model = function()
-      local ok, model = pcall(_99.get_model)
-      if not ok or not model or model == "" then
-        return ""
-      end
-      return "󰚩 " .. model
+    -- List models opencode can reach (one `provider/model` id per line).
+    local function opencode_models(cb)
+      vim.system({ "opencode", "models" }, { text = true }, function(obj)
+        vim.schedule(function()
+          if obj.code ~= 0 then
+            vim.notify("99: `opencode models` failed", vim.log.levels.ERROR)
+            return
+          end
+          cb(vim.split(obj.stdout, "\n", { trimempty = true }))
+        end)
+      end)
     end
 
-    local function refresh_lualine()
-      local ok, lualine = pcall(require, "lualine")
-      if ok then
-        lualine.refresh()
+    -- Assign a freshly picked model id (full `provider/model`) to a context.
+    local function set_context_model(ctx, id)
+      _G.ninetynine_models[ctx] = id
+      refresh_lualine()
+      vim.notify("99: " .. ctx .. " model -> " .. id)
+    end
+
+    -- Picker (telescope if present, else vim.ui.select) to set a context model.
+    -- ctx is "edit" or "search".
+    _G.ninetynine_pick_model = function(ctx)
+      opencode_models(function(models)
+        if #models == 0 then
+          vim.notify("99: no opencode models available", vim.log.levels.WARN)
+          return
+        end
+        local title = "99: select " .. ctx .. " model"
+        local ok, pickers = pcall(require, "telescope.pickers")
+        if not ok then
+          vim.ui.select(models, { prompt = title }, function(choice)
+            if choice then
+              set_context_model(ctx, choice)
+            end
+          end)
+          return
+        end
+        local finders = require("telescope.finders")
+        local conf = require("telescope.config").values
+        local actions = require("telescope.actions")
+        local action_state = require("telescope.actions.state")
+        pickers
+          .new({}, {
+            prompt_title = title,
+            finder = finders.new_table({ results = models }),
+            sorter = conf.generic_sorter({}),
+            attach_mappings = function(bufnr)
+              actions.select_default:replace(function()
+                actions.close(bufnr)
+                local sel = action_state.get_selected_entry()
+                if sel then
+                  set_context_model(ctx, sel[1])
+                end
+              end)
+              return true
+            end,
+          })
+          :find()
+      end)
+    end
+
+    -- Run a 99 op under its context's model. set_model snapshots synchronously
+    -- into the request at creation, so this is race-free with the async prompt.
+    _G.ninetynine_run = function(ctx, fn)
+      _99.set_model(_G.ninetynine_models[ctx])
+      require("99")[fn]()
+    end
+
+    -- Statusline helper: show both context models (short form, provider stripped)
+    _G.ninetynine_lualine_model = function()
+      local m = _G.ninetynine_models or {}
+      local function short(x)
+        return (x or "?"):gsub("^.-/", "")
       end
+      return string.format("󰚩 e:%s  s:%s", short(m.edit), short(m.search))
     end
 
     local orig_set_model = _99.set_model
@@ -93,11 +175,11 @@ in {
       key = "<leader>9v";
       action.__raw = ''
         function()
-          require("99").visual()
+          _G.ninetynine_run("edit", "visual")
         end
       '';
       options = {
-        desc = "99: visual replacement";
+        desc = "99: visual replacement (edit model)";
         silent = true;
         noremap = true;
       };
@@ -107,11 +189,11 @@ in {
       key = "<leader>9s";
       action.__raw = ''
         function()
-          require("99").search()
+          _G.ninetynine_run("search", "search")
         end
       '';
       options = {
-        desc = "99: search";
+        desc = "99: search (search model)";
         silent = true;
         noremap = true;
       };
@@ -163,11 +245,25 @@ in {
       key = "<leader>9m";
       action.__raw = ''
         function()
-          require("99.extensions.telescope").select_model()
+          _G.ninetynine_pick_model("edit")
         end
       '';
       options = {
-        desc = "99: select model (telescope)";
+        desc = "99: set edit model";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>9M";
+      action.__raw = ''
+        function()
+          _G.ninetynine_pick_model("search")
+        end
+      '';
+      options = {
+        desc = "99: set search model";
         silent = true;
         noremap = true;
       };

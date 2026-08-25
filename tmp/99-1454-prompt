@@ -1,0 +1,1422 @@
+<Context>
+You receive a selection in neovim that you need to replace with new code.
+The selection's contents may contain notes, incorporate the notes every time if there are some.
+consider the context of the selection and what you are suppose to be implementing
+<SELECTION_LOCATION>
+range(point(28,1),point(33,57))
+</SELECTION_LOCATION>
+<SELECTION_CONTENT>
+      gitRev =
+        if self ? rev
+        then self.rev
+        else if self ? dirtyRev
+        then builtins.substring 0 40 self.dirtyRev
+        else "0000000000000000000000000000000000000000";
+</SELECTION_CONTENT>
+<SURROUNDING_CONTEXT>
+{
+  description = "Jenkin Schibels Neovim configuration - Nixvim";
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+
+    nixvim = {
+      url = "github:nix-community/nixvim";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = {
+    self,
+    nixpkgs,
+    nixvim,
+    ...
+  }: let
+    systems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
+    forAllSystems = nixpkgs.lib.genAttrs systems;
+  in {
+    packages = forAllSystems (system: let
+      pkgs = import nixpkgs {
+        inherit system;
+        config = {allowUnfree = true;};
+      };
+      nixvim' = nixvim.legacyPackages.${system};
+      gitRev =
+        if self ? rev
+        then self.rev
+        else if self ? dirtyRev
+        then builtins.substring 0 40 self.dirtyRev
+        else "0000000000000000000000000000000000000000";
+      nvim = nixvim'.makeNixvimWithModule {
+        inherit pkgs;
+        module = import ./config;
+        extraSpecialArgs = {inherit gitRev;};
+      };
+    in {
+      default = nvim;
+      neovim = nvim;
+    });
+  };
+}
+</SURROUNDING_CONTEXT>
+
+</Context>
+<Prompt>
+make this more terse
+</Prompt>
+
+<Lob-go>
+# Golang Locality of Behaviour (LoB) Skill
+
+## Purpose
+
+Write Go code maximising **Locality of Behaviour (LoB)**: behaviour of any code unit obvious by looking only at that unit. No "spooky action at a distance" — behaviour secretly determined by code in different file/package/layer.
+
+> "The primary feature for easy maintenance is locality: Locality is that characteristic of
+> source code that enables a programmer to understand that source by looking at only a small
+> portion of it." — Richard Gabriel
+
+---
+
+## Core Principle
+
+Before writing Go code, ask: *"Could reader understand this without leaving this file — ideally without leaving this function?"* If no, restructure until yes (or document unavoidable indirection explicitly).
+
+---
+
+## Rule Set
+
+### 1. Explicit Dependency Injection — No Global State
+
+**Bad (spooky globals):**
+```go
+// db.go
+var DB *sql.DB
+
+// user.go
+func GetUser(id int) (*User, error) {
+    return DB.QueryRow(...) // DB comes from nowhere visible here
+}
+```
+
+**Good (dependencies at call site):**
+```go
+func GetUser(db *sql.DB, id int) (*User, error) {
+    return db.QueryRow(...)
+}
+```
+
+All deps must appear in function signature or receiver. Reader sees everything from signature.
+
+---
+
+### 2. Functional Options — Declare Behaviour Where It Is Used
+
+Use functional options for struct config — caller code self-documents.
+
+**Bad:**
+```go
+cfg := NewServerConfig()
+cfg.Timeout = 30 * time.Second   // scattered mutations, no local story
+cfg.MaxConns = 100
+s := NewServer(cfg)
+```
+
+**Good:**
+```go
+s := NewServer(
+    WithTimeout(30 * time.Second),
+    WithMaxConns(100),
+)
+```
+
+Define each `With*` option right after struct it configures — same file, close proximity. No separate `options.go` unless file is exclusively options for that type.
+
+---
+
+### 3. No `init()` Functions
+
+`init()` runs invisibly at import — canonical "spooky action at a distance" in Go. Never use for side effects (registering drivers, mutating globals, starting goroutines).
+
+**Bad:**
+```go
+func init() {
+    sql.Register("mydriver", &Driver{})
+}
+```
+
+**Good:**
+```go
+// Call explicitly in main or in a named setup function called from main.
+func RegisterDriver() {
+    sql.Register("mydriver", &Driver{})
+}
+```
+
+Exception: `init()` OK only for pure compile-time assertions (e.g. `var _ SomeInterface = (*MyType)(nil)`).
+
+---
+
+### 4. Interface Satisfaction Declared at the Type
+
+Place interface compliance assertions right after type definition, not in separate file.
+
+```go
+type UserService struct { db *sql.DB }
+
+// Assertion lives right next to the type — no hunting required.
+var _ UserRepository = (*UserService)(nil)
+
+func (s *UserService) GetUser(id int) (*User, error) { ... }
+```
+
+---
+
+### 5. HTTP Handlers Own Their Route Declaration
+
+Route registration must live adjacent to handler, not in central `routes.go` requiring cross-reference.
+
+**Pattern A — handler file registers via `Register` function:**
+```go
+// users/handler.go
+func RegisterRoutes(mux *http.ServeMux) {
+    mux.HandleFunc("GET /users/{id}", handleGetUser)
+    mux.HandleFunc("POST /users",     handleCreateUser)
+}
+
+func handleGetUser(w http.ResponseWriter, r *http.Request) { ... }
+func handleCreateUser(w http.ResponseWriter, r *http.Request) { ... }
+```
+
+```go
+// main.go
+users.RegisterRoutes(mux)
+```
+
+**Pattern B (small projects) — inline in main:**
+```go
+mux.HandleFunc("GET /users/{id}", users.HandleGetUser)
+```
+
+Never split route→handler mappings across files without deliberate package boundary.
+
+---
+
+### 6. Middleware — Explicit Wrapping, Not Silent Injection
+
+Middleware must be visible at handler registration site.
+
+**Bad (hidden in framework):**
+```go
+// Some framework magic silently wraps all handlers with auth
+app.Use(AuthMiddleware)
+mux.HandleFunc("/admin", handleAdmin) // reader cannot see auth is enforced here
+```
+
+**Good (explicit wrapping):**
+```go
+mux.HandleFunc("/admin", RequireAuth(handleAdmin))
+mux.HandleFunc("/public", handlePublic) // clearly unauthenticated
+```
+
+---
+
+### 7. Error Handling Inline, Not Centralised
+
+Handle errors where they occur. No global error handler reader must locate separately.
+
+**Bad:**
+```go
+func GetUser(db *sql.DB, id int) (*User, error) {
+    u, err := db.QueryRow(...)
+    check(err) // "check" panics somewhere in utils.go
+    return u, nil
+}
+```
+
+**Good:**
+```go
+func GetUser(db *sql.DB, id int) (*User, error) {
+    u, err := db.QueryRow(...)
+    if err != nil {
+        return nil, fmt.Errorf("GetUser %d: %w", id, err)
+    }
+    return u, nil
+}
+```
+
+---
+
+### 8. Table-Driven Tests Live in the Same File as the Code They Test
+
+No separate `testdata_test.go`. Keep table adjacent to test function.
+
+```go
+// user_test.go
+func TestGetUser(t *testing.T) {
+    cases := []struct {
+        name    string
+        id      int
+        wantErr bool
+    }{
+        {"valid user",   1, false},
+        {"missing user", 0, true},
+    }
+    for _, tc := range cases {
+        t.Run(tc.name, func(t *testing.T) {
+            ...
+        })
+    }
+}
+```
+
+---
+
+### 9. Struct Tags Are the Behaviour Declaration — Use Them Fully
+
+Struct JSON/DB/validation behaviour readable from struct definition, not separate schema or registration.
+
+```go
+type User struct {
+    ID        int    `json:"id"             db:"id"`
+    Email     string `json:"email"          db:"email"          validate:"required,email"`
+    Password  string `json:"-"              db:"password_hash"`
+    CreatedAt time.Time `json:"created_at"  db:"created_at"`
+}
+```
+
+Avoid validator registrations in `init()` when struct tag carries same info.
+
+---
+
+### 10. `//go:generate` Directives Live Next to What They Generate
+
+```go
+// Place this directly above the type or file whose code is generated.
+//go:generate stringer -type=Status
+
+type Status int
+
+const (
+    StatusPending Status = iota
+    StatusActive
+    StatusClosed
+)
+```
+
+---
+
+### 11. Context Is Threaded, Never Stored
+
+Never store `context.Context` in struct field. Pass as first arg — propagation chain stays locally visible.
+
+```go
+// Bad
+type Service struct { ctx context.Context }
+
+// Good
+func (s *Service) DoWork(ctx context.Context) error { ... }
+```
+
+---
+
+### 12. Prefer Concrete Types at Package Boundaries, Interfaces Inside
+
+Accept interfaces, return concrete types — define interface *at consumer*, not producer package.
+
+```go
+// In the http handler package (consumer):
+type userStore interface {
+    GetUser(ctx context.Context, id int) (*User, error)
+}
+
+func NewUserHandler(store userStore) http.Handler { ... }
+```
+
+Reader of `NewUserHandler` sees exact contract without visiting another package.
+
+---
+
+## Balancing LoB Against DRY and SoC
+
+Not absolute. Apply judgment:
+
+| Situation | Guidance |
+|---|---|
+| Repeated 2-line helper used 10x | Extract to named function; keep same file if only used there |
+| Shared DB connection | Pass via DI; not as global |
+| Logging/tracing middleware | Wrap explicitly at registration, not global |
+| Generated code (`*.pb.go`, `*_gen.go`) | OK separate; annotate with `// Code generated` |
+| Cross-cutting auth | Explicit middleware per route, not global interceptor |
+
+Key question: *how far is behaviour from code it affects?* Few lines = fine. Separate file = hurts. Separate package with no clear link = LoB violation.
+
+---
+
+## Checklist Before Submitting Code
+
+- [ ] All function deps visible in signature or receiver
+- [ ] No `init()` with side effects
+- [ ] No package-level `var` mutated after startup
+- [ ] Route → handler mapping visible at/near handler
+- [ ] Middleware wrapping explicit at each registration site
+- [ ] Errors returned/handled where they occur
+- [ ] Tests + table cases in same file as code under test
+- [ ] `//go:generate` directives adjacent to generated type
+- [ ] Context passed as parameter, never stored
+- [ ] Interface definitions in consumer package, not producer
+</Lob-go>
+<css-scope-inline>
+---
+name: css-scope-inline
+description: >
+  Use this skill whenever writing or reviewing HTML with inline styles, scoped CSS,
+  component-level styling, or when the user wants to avoid Tailwind/utility classes but
+  still keep styles co-located with markup. Also use when the user mentions htmx, Surreal,
+  locality of behavior, or asks how to scope a style tag to its parent element.
+  Trigger for any question about css-scope-inline, "me { }" selectors, inline @media queries,
+  scoped @keyframes, or DOM-scoped CSS without a build step.
+---
+
+# css-scope-inline
+
+16-line zero-dep JS. `<style>` inside any element → `me`/`this`/`self` selectors scope to parent. No class names needed.
+
+Repo: https://github.com/gnat/css-scope-inline
+Demo: https://gnat.github.io/css-scope-inline/example.html
+
+## Install
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/gnat/css-scope-inline@main/script.js"></script>
+```
+
+Or self-host `script.js`, or inline 16-line snippet in `<head>`. No build/npm/config.
+
+## Core
+
+```html
+<div>
+    <style>
+        me { background: red; }           /* styles THIS div */
+        me button { background: blue; }   /* buttons INSIDE this div */
+        me:hover { opacity: 0.8; }        /* pseudo-classes work */
+    </style>
+    <button>I'm blue</button>
+</div>
+```
+
+MutationObserver watches DOM. On `<style>` detect:
+1. Generate unique class `.me__1234`
+2. Add class to `<style>` parent
+3. Replace `me`/`this`/`self` with `.me__1234`
+4. Mark `<style ready>` — skip on re-scan
+
+Fully scoped, no flash, works with dynamic DOM (htmx swaps, ajax).
+
+## Selector Keywords
+
+`me`, `this`, `self` — interchangeable. Pick what reads best.
+
+## Responsive Shorthand
+
+Script rewrites short media queries:
+
+**Mobile-first (min-width):** `sm`=640 `md`=768 `lg`=1024 `xl`=1280 `xx`=1536
+
+**Desktop-first (max-width):** `xs-`=639 `sm-`=767 `md-`=1023 `lg-`=1279 `xl-`=1535
+
+`xx` not `2xl` — avoids breaking CSS highlighters.
+
+```html
+<div>
+    <style>
+        me { font-size: 14px; }
+        @media md { me { font-size: 18px; } }
+        @media lg { me { font-size: 22px; } }
+    </style>
+    Responsive text
+</div>
+```
+
+## CSS Nesting
+
+Native nesting works:
+
+```html
+<div>
+    <style>
+        me {
+            background: #eee;
+            & button {
+                color: blue;
+                &:hover { color: darkblue; }
+            }
+        }
+    </style>
+    <button>Nested styles work!</button>
+</div>
+```
+
+## Scoped @keyframes
+
+Script auto-strips `.me__` from animation names:
+
+```html
+<style>
+    @keyframes slide { from { opacity:0 } to { opacity:1 } }
+    me { animation: slide 1s ease; }
+</style>
+```
+
+Or explicit: `@keyframes me__slide` — both work.
+
+## Positional Selectors
+
+Attribute shorthand beats `nth-child`:
+
+```html
+<div>
+    <style>
+        me [n1] { background: yellow; }
+        me [n2] { background: green; }
+    </style>
+    <div n1>First</div>
+    <div n2>Second</div>
+</div>
+```
+
+## Inline ↔ External CSS
+
+Replace `me` with real class/selector to move to `.css` file. Reverse to bring back inline.
+
+## Works With
+
+- **htmx** — MutationObserver re-runs on DOM swap. Scoped styles auto-apply to dynamic content.
+- **Surreal** — Companion lib, scopes `<script>` same way. https://github.com/gnat/surreal
+- **Any vanilla HTML** — No framework needed.
+
+## Patterns
+
+### Card w/ hover
+
+```html
+<div class="card">
+    <style>
+        me { padding: 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        me:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.2); transition: box-shadow 0.2s; }
+        me h2 { margin: 0 0 0.5rem; font-size: 1.2rem; }
+        me p { color: #666; }
+    </style>
+    <h2>Title</h2>
+    <p>Description text</p>
+</div>
+```
+
+### Nav w/ CSS vars
+
+```html
+<style>
+    :root { --nav-bg: #1a1a2e; --nav-active: #e94560; }
+</style>
+<nav>
+    <style>
+        me { background: var(--nav-bg); padding: 0.5rem 1rem; display: flex; gap: 1rem; }
+        me a { color: white; text-decoration: none; padding: 0.4rem 0.8rem; border-radius: 4px; }
+        me a:hover, me a.active { background: var(--nav-active); }
+    </style>
+    <a href="/" class="active">Home</a>
+    <a href="/about">About</a>
+</nav>
+```
+
+### Responsive grid
+
+```html
+<div>
+    <style>
+        me { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        @media md { me { grid-template-columns: repeat(2, 1fr); } }
+        @media lg { me { grid-template-columns: repeat(3, 1fr); } }
+    </style>
+    <div>Item 1</div>
+    <div>Item 2</div>
+    <div>Item 3</div>
+</div>
+```
+
+## Full Script (16 lines)
+
+```js
+// 🌘 CSS Scope Inline (https://github.com/gnat/css-scope-inline)
+window.cssScopeCount ??= 1
+window.cssScope ??= new MutationObserver(mutations => {
+    document?.body?.querySelectorAll('style:not([ready])').forEach(node => {
+        var scope = 'me__'+(window.cssScopeCount++)
+        node.parentNode.classList.add(scope)
+        node.textContent = node.textContent
+        .replace(/(?:^|\.|(\s|[^a-zA-Z0-9\-\_]))(me|this|self)(?![a-zA-Z])/g, '$1.'+scope)
+        .replace(/((@keyframes|animation:|animation-name:)[^{};]*)\.me__/g, '$1me__')
+        .replace(/(?:@media)\s(xs-|sm-|md-|lg-|xl-|sm|md|lg|xl|xx)/g,
+            (match, part1) => { return '@media '+({'sm':'(min-width: 640px)','md':'(min-width: 768px)',
+            'lg':'(min-width: 1024px)','xl':'(min-width: 1280px)','xx':'(min-width: 1536px)',
+            'xs-':'(max-width: 639px)','sm-':'(max-width: 767px)','md-':'(max-width: 1023px)',
+            'lg-':'(max-width: 1279px)','xl-':'(max-width: 1535px)'}[part1]) }
+        )
+        node.setAttribute('ready', '')
+    })
+}).observe(document.documentElement, {childList: true, subtree: true})
+```
+
+## Gotchas
+
+- **Requires JS** — MutationObserver applies styles, not parser.
+- **`me` needs non-letter after** — `me {}` works, `menu {}` untouched (correct).
+- **Multi-include safe** — shared globals, one observer runs.
+- **No `me`/`this`/`self` in `<style>`** — left untouched. Safe to mix scoped + global.
+- **`ready` attr** = processed marker. Never manually add to unprocessed `<style>`.
+
+</css-scope-inline>
+<jj-waltz>
+---
+name: jj-waltz
+description: >
+  Manages jj (Jujutsu) workspaces using the `jw` CLI tool. ALWAYS use at
+  start of any new task, feature, bug fix, or exploration in jj repo — even
+  if user not explicitly ask for workspace management. Triggers: starting
+  work, switching context, "new feature", "fix this bug", "let's work on X",
+  any mention of jj workspaces/worktrees, or need isolated env for change.
+  Use `jw list` first to check existing workspaces before creating new ones.
+  Use `jw switch <name>` to enter right workspace. Name workspaces after
+  task or relevant bookmark, keep bookmarks in sync with changesets. Run
+  `jw -h` for full command reference.
+---
+
+# jw (jj-waltz)
+
+`jw` CLI tool for managing jj workspaces.
+
+## Prerequisites
+Before any `jw` command, verify in jj repo:
+
+```bash
+jj root
+```
+
+- Returns path → in jj repo, proceed
+- Errors → **do not use this skill**. Inform user: no jj repo found in current dir or parents.
+
+## When to use
+- **Starting any new task** → `jw switch <task-name>` for isolated workspace
+- **Resuming existing work** → `jw list` first, then `jw switch <name>`
+- **Naming workspaces**: use task name, or bookmark name if exists or creating one
+
+## Core workflow
+1. `jj root` — confirm inside jj repo (always first)
+2. `jw list` — see existing workspaces
+3. `jw switch <name>` — create or enter workspace (name after task or bookmark)
+4. Keep bookmarks in sync with changesets if using bookmark-based names
+5. `jw -h` — full command reference
+
+## Naming conventions
+- Task-based: `fix-login-bug`, `add-search-feature`
+- Bookmark-based: use bookmark name directly if exists or creating one
+</jj-waltz>
+<microvm-nix>
+---
+name: microvm-nix
+description: Use when working with microvm.nix — the Nix Flake for running lightweight NixOS MicroVMs. Triggers on microvm.nix, NixOS MicroVMs, qemu/cloud-hypervisor/firecracker/crosvm/kvmtool/stratovirt/alioth/vfkit hypervisor in Nix, `microvm.vms`/`microvm.host`/`microvm.shares`/`microvm.interfaces` options, virtiofs/9p `/nix/store` sharing into VMs, TAP+bridge VM networking, `/var/lib/microvms`, `microvm` CLI, declarative or imperative MicroVM deployment, NixOS replacement for Docker/LXC/systemd-nspawn with stronger isolation, vfkit on macOS via Apple Virtualization.framework.
+---
+
+# microvm.nix
+
+Flake for declarative, lightweight NixOS VMs. Stronger isolation than containers (own kernel), smaller closure than full NixOS images (read-only erofs/squashfs root + shared host `/nix/store`).
+
+Docs: https://microvm-nix.github.io/microvm.nix
+Repo: https://github.com/microvm-nix/microvm.nix
+
+## Hypervisors
+
+| Hypervisor | Notes |
+|---|---|
+| `qemu` | Default. Most features. |
+| `cloud-hypervisor` | Rust. Fast boot. |
+| `firecracker` | Rust. AWS Lambda-style. |
+| `crosvm` | Rust. ChromeOS. |
+| `kvmtool` | Lightweight C. |
+| `stratovirt` | Rust. |
+| `alioth` | Rust. |
+| `vfkit` | macOS only. Apple Virtualization.framework. **No 9p — use virtiofs.** |
+
+Set: `microvm.hypervisor = "cloud-hypervisor";`
+
+## Host module
+
+```nix
+imports = [ inputs.microvm.nixosModules.host ];
+microvm.autostart = [ "vm1" "vm2" ];
+```
+
+Provides:
+- `/var/lib/microvms/<name>/` — VM state dir
+- systemd services: `microvm@<name>.service`, tap setup, virtiofsd
+- `microvm` CLI tool
+
+## Guest module options
+
+```nix
+imports = [ inputs.microvm.nixosModules.microvm ];
+microvm = {
+  hypervisor = "qemu";          # default qemu
+  vcpu = 2;                     # default 1
+  mem = 1024;                   # default 512 MB
+  hotplugMem = 2048;            # virtio-mem max additional
+  storeOnDisk = false;          # true = compressed store disk; false = share host store
+  writableStoreOverlay = "/nix/.rw-store";  # optional rw overlay (needs volume, not share)
+
+  shares = [ ... ];             # virtiofs / 9p mounts
+  volumes = [ ... ];            # disk images, auto-created/formatted
+  interfaces = [ ... ];         # network
+  forwardPorts = [ ... ];       # IPv4 only, qemu user-net
+  vsock.cid = 42;               # AF_VSOCK
+  devices = [ ... ];            # PCI/USB passthrough
+};
+```
+
+## Shares — 9p vs virtiofs
+
+| | 9p | virtiofs |
+|---|---|---|
+| Daemon | None (built into hv) | `virtiofsd` (auto via host module; vfkit built-in) |
+| Speed | Slow | Fast |
+| vfkit | ❌ | ✅ |
+| Default | yes | — |
+
+```nix
+microvm.shares = [
+  { proto = "virtiofs"; tag = "ro-store"; source = "/nix/store"; mountPoint = "/nix/.ro-store"; }
+  { proto = "virtiofs"; tag = "home";     source = "/srv/vm1/home"; mountPoint = "/home"; }
+];
+```
+
+**Always share host `/nix/store`** — avoids building huge image per VM.
+
+**ZFS source**: dataset must have `xattr=sa acltype=posixacl`.
+
+**Writable overlay**: must use `microvm.volumes`, not shares (Linux overlayfs limitation on virtiofs/9p lower dirs is fine but upperdir cannot be on them).
+
+## Networking — TAP + bridge
+
+```nix
+# guest
+microvm.interfaces = [{
+  type = "tap";
+  id   = "vm-test1";          # name pattern matched on host
+  mac  = "02:00:00:00:00:01"; # locally-administered prefix 02:
+}];
+
+# host (systemd-networkd)
+systemd.network.networks."10-lan" = {
+  matchConfig.Name = [ "eno1" "vm-*" ];
+  networkConfig.Bridge = "br0";
+};
+systemd.network.netdevs."br0" = { netdevConfig = { Kind = "bridge"; Name = "br0"; }; };
+```
+
+Interface types: `user` (qemu slirp, NAT), `tap`, `macvtap`, `bridge`.
+
+Watch out: `systemd-networkd` will also try to manage Docker `veth*` inside guest — exclude via `matchConfig` if running Docker in MicroVM.
+
+## Declarative VMs (host config defines guest)
+
+```nix
+microvm.vms.vm1 = {
+  inherit (inputs) nixpkgs;            # or pkgs = ...
+  config = { ... }: {
+    networking.hostName = "vm1";
+    microvm.hypervisor = "cloud-hypervisor";
+    microvm.shares = [ /* share /nix/store */ ];
+    microvm.interfaces = [ /* tap */ ];
+  };
+};
+
+# Or reference external flake:
+microvm.vms.vm2 = {
+  flake = inputs.myvm;
+  updateFlake = "github:me/myvm";   # for `microvm -u vm2`
+};
+```
+
+## Imperative CLI
+
+`microvm` tool (installed by host module). Subcommands include create/list/update/start/run — exact flags vary by version (online docs imperative page 404'd at time of writing). Run `microvm --help`.
+
+Common flow:
+- `microvm -c <name>` — create from declarative config
+- `microvm -u <name>` — update (re-deploy after flake change)
+- `microvm -l` — list
+- `microvm -R <name>` — run in foreground (debug)
+- `systemctl start microvm@<name>` — start as service
+
+## Minimal flake skeleton
+
+```nix
+{
+  inputs.nixpkgs.url      = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.microvm.url      = "github:microvm-nix/microvm.nix";
+  inputs.microvm.inputs.nixpkgs.follows = "nixpkgs";
+
+  outputs = { self, nixpkgs, microvm }: {
+    nixosConfigurations.host = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        microvm.nixosModules.host
+        ({ ... }: {
+          microvm.autostart = [ "vm1" ];
+          microvm.vms.vm1.config = { ... }: {
+            networking.hostName = "vm1";
+            users.users.root.password = "";
+            services.openssh.enable = true;
+            microvm.hypervisor = "cloud-hypervisor";
+            microvm.mem = 1024;
+            microvm.interfaces = [{
+              type = "tap"; id = "vm-vm1"; mac = "02:00:00:00:00:01";
+            }];
+            microvm.shares = [{
+              proto = "virtiofs"; tag = "ro-store";
+              source = "/nix/store"; mountPoint = "/nix/.ro-store";
+            }];
+          };
+        })
+      ];
+    };
+  };
+}
+```
+
+## Gotchas
+
+- vfkit (macOS): no 9p — virtiofs only.
+- Writable `/nix/store` overlay: must use volume; cannot live on share.
+- Forgetting to share `/nix/store` → multi-GB stage1 squashfs per VM.
+- `forwardPorts` IPv4 only, qemu user-net only.
+- TAP names should match host `vm-*` networkd rule, else no bridge attach.
+- MAC: use `02:` locally-administered prefix to avoid collisions.
+- Defaults: 1 vCPU, 512 MB RAM — bump for real workloads.
+- `microvm.autostart` only takes effect after `microvm -c` has staged the VM in `/var/lib/microvms`.
+
+## Doc subpages
+
+- `intro.html` — quickstart
+- `declarative.html` — `microvm.vms` on host
+- `host.html` — host module
+- `microvm-options.html` — full option reference
+- `shares.html` — 9p / virtiofs
+- `simple-network.html` — TAP + bridge
+- `imperative.html` — currently 404; use `microvm --help`
+
+</microvm-nix>
+<paired-programming>
+---
+name: paired-programming
+description: >
+  Act as mentor and pair programmer. Prioritize small, surgical edits over
+  rewrites. Never make large changes without explicit ask. Seek context from
+  the repo first, then the web when useful. Point out pitfalls before writing
+  code. Triggers: "pair with me", "pair program", "let's work through this
+  together", "be my pair", "mentor me on this", "walk me through", "review as
+  we go", "/pair", "/paired-programming". Also use when user is clearly
+  learning a codebase, weighing tradeoffs, or asking for a sounding board
+  rather than a finished patch.
+---
+
+# Paired Programming
+
+Mentor + pair programmer mode. User drives direction. You navigate.
+
+## Core stance
+
+- **Small edits, small chunks.** Prefer 5-line surgical change over 50-line rewrite. One concern per edit.
+- **Never large changes without explicit ask.** If change grows beyond ~30 lines or touches >2 files, stop and confirm scope before writing.
+- **Pitfalls first, code second.** Before edit: name the risks (edge cases, coupling, invariants, perf, security). Then propose smallest change addressing them.
+- **User owns direction.** Suggest, do not impose. If user picks approach you disagree with, voice concern once, then execute.
+
+## Context discipline
+
+Before recommending anything:
+
+1. **Read the repo first.** grep, read the file, check callers. Do not answer architectural questions from priors when the code is right there.
+2. **Web only when repo insufficient.** Library docs, error strings, standards, current API shape. Cite what you fetched.
+3. **State assumptions.** If you skipped a check to save time, say which one. Let user redirect.
+
+## Mentor mode
+
+Explain the *why*, not just the *what*:
+
+- When suggesting a pattern, name the tradeoff it resolves.
+- When pointing out a bug, describe the class of bug so user recognizes the next one.
+- When user proposes something risky, ask a leading question before objecting outright ("what happens if two callers hit this concurrently?").
+- Do not lecture. One paragraph max unless user asks to go deeper.
+
+## Edit protocol
+
+1. **Describe the edit in one sentence** before making it.
+2. **Show the diff scope**: which file, which function, roughly how many lines.
+3. **Make the edit.** Use Edit tool with tight `old_string`/`new_string` — no unrelated cleanup swept in.
+4. **Confirm after**: what changed, what to verify, what you did NOT change.
+
+If mid-edit you realize the change is larger than promised: **stop, report, ask**.
+
+## What NOT to do
+
+- No opportunistic refactors ("while I'm here…"). Note them for user, do not act.
+- No renaming variables, reformatting, reordering imports unless that IS the task.
+- No adding tests, docs, or error handling the user did not ask for.
+- No silent scope expansion. If task creeps, surface it.
+- No confidence performance. If unsure, say "I don't know — let me check" and check.
+
+## When stuck
+
+- Errors recurring after 2 attempts → stop, describe what you observed, ask user how to proceed.
+- Approach not converging → propose reverting to last known-good state.
+- Fundamental disagreement with user's direction → state concern plainly, offer alternative, defer.
+
+## Exit criteria
+
+Session ends when user says so. Do not declare "done" unilaterally on a pairing session — user decides when the loop closes.
+
+</paired-programming>
+<surreal-js>
+---
+name: surreal
+description: >
+  Use skill when user works with Surreal.js — tiny (~320 line) jQuery alternative
+  enabling Locality of Behavior via inline <script> tags, chainable DOM manipulation,
+  dependency-free animations. Trigger on: surreal.js, me(), any(), LoB with JS,
+  htmx companion scripts, event handlers/DOM without jQuery/build step, sleep()/await
+  animations, fadeIn/fadeOut, inline script scoping.
+---
+
+# Surreal.js Skill
+
+Surreal: ~320-line, no-dependency, no-build-step JS library.
+Core idea — **Locality of Behavior (LoB)**: behavior lives next to HTML element via inline `<script>` tags.
+
+CDN: `<script src="https://cdn.jsdelivr.net/gh/gnat/surreal@main/surreal.js"></script>`
+Download: `https://raw.githubusercontent.com/gnat/surreal/main/surreal.js`
+Pinned commit: `ffc4525`
+
+---
+
+## Core Concepts
+
+### `me()` vs `any()`
+
+| Function | Returns | Use when… |
+|----------|---------|-----------|
+| `me()` | 1 element (or null) | targeting a single element |
+| `any()` | array (or `[]`) | targeting multiple elements |
+
+Solves classic jQuery `$()` ambiguity.
+
+### Locality of Behavior — the key pattern
+
+```html
+<div class="card">
+  <script>
+    me().on("click", ev => { me(ev).classToggle("active") })
+  </script>
+</div>
+```
+
+`me()` with **no arguments** inside inline `<script>` returns **parent element** — no id/class needed.
+
+---
+
+## Selectors
+
+```js
+me()              // parent element of the inline <script>
+me("body")        // <body>
+me(".btn")        // first .btn
+me("#header")     // #header
+me(event)         // element that fired the event (uses currentTarget)
+me('-')           // previous sibling (for void elements like <input>)
+me('prev')        // same as me('-')
+
+any(".btn")       // ALL .btn elements → array
+any("button", me("#nav"))  // buttons *inside* #nav only
+```
+
+---
+
+## Full API Reference
+
+### DOM Manipulation (chainable off `me()` / `any()`)
+
+```js
+// Class
+me().classAdd('active')        // leading . optional: classAdd('.active')
+me().classRemove('active')
+me().classToggle('active')
+// Aliases: class_add / addClass / add_class (snake_case or camelCase both work)
+
+// Styles
+me().styles('color: red')
+me().styles({ color: 'red', background: 'blue' })
+me().styles({ background: null })   // remove a style
+
+// Attributes
+me().attribute('data-x')                          // get
+me().attribute('data-x', true)                    // set
+me().attribute({ 'data-x': 'yes', 'data-y': 'no' }) // set multiple
+me().attribute('data-x', null)                    // remove
+// Aliases: attributes / attr
+
+// Events
+me().on('click', ev => { ... })     // addEventListener wrapper
+me().off('click', fn)               // removeEventListener wrapper
+me().offAll()                       // remove all listeners
+me().disable()                      // disable click/key/submit events
+me().enable()                       // re-enable
+
+// Custom events
+me().send('change')
+me().send('change', { data: 'thing' })   // with detail payload
+// Alias: trigger
+
+// Iteration
+me().run(e => { console.log(e) })   // forEach but also works on single elements
+any('.btn').run(e => { ... })
+
+// Remove element
+me().remove()
+```
+
+### Global Utility Functions
+
+```js
+sleep(ms)              // async setTimeout — use with await for timelines
+await sleep(1000)
+
+tick()                 // await one animation frame (requestAnimationFrame)
+await tick()
+
+rAF(fn)                // requestAnimationFrame alias
+rIC(fn)                // requestIdleCallback alias
+
+halt(event)            // stopPropagation + preventDefault
+
+createElement("div")   // document.createElement alias
+create_element("div")  // snake_case alias
+
+onloadAdd(fn)          // safe window.onload — stacks, doesn't overwrite
+```
+
+### Built-in Effects (Plugins)
+
+```js
+me().fadeOut()                              // fade out and remove
+me().fadeOut(callback, 3000)               // over 3s then call fn
+me().fadeIn()                              // fade in (element must have opacity:0)
+me().fadeIn(callback, 3000)
+// Aliases: fade_out / fade_in
+```
+
+---
+
+## Common Patterns
+
+### Inline event handler (most common)
+```html
+<button>
+  Click me
+  <script>me().on("click", ev => { alert("hi!") })</script>
+</button>
+```
+
+### Async animation timeline
+```html
+<div class="box">
+  <script>
+    me().on("click", async ev => {
+      let el = me(ev)           // save ref — async loses `this`
+      me(el).styles({ transition: "background 1s" })
+      await sleep(1000); me(el).styles({ background: "red" })
+      await sleep(1000); me(el).styles({ background: "blue" })
+      await sleep(1000); me(el).fadeOut()
+    })
+  </script>
+</div>
+```
+
+### Run immediately on load
+```html
+<div>
+  <script>
+    (async (el = me()) => {
+      await sleep(500)
+      me(el).classAdd("visible")
+    })()
+  </script>
+</div>
+```
+
+### Select void element (`<input>`, `<hr>`, etc.)
+```html
+<input type="text" />
+<script>me('-').value = "hello"</script>
+```
+
+### Scope variables inside inline scripts
+```html
+<script>
+  {   // block scope with { }
+    let msg = "Hello"
+    function greet(t) { alert(t) }
+    me().on("click", () => greet(msg))
+  }
+</script>
+```
+
+### Attach methods directly to element
+```html
+<script>
+  me().greet = (text) => { alert(text) }
+  me().on("click", ev => { me(ev).greet("hi") })
+</script>
+```
+
+### Guard against missing elements
+```js
+me("#might-not-exist")?.classAdd("active")
+me("#might-not-exist", document, false)?.classAdd("active")  // suppress warn
+```
+
+### onloadAdd — safe deferred execution
+```html
+<script>
+  let e = me()
+  onloadAdd(_ => { me(e).on("click", ev => { alert("loaded") }) })
+</script>
+```
+
+---
+
+## Pairing with htmx
+
+htmx handles AJAX; surreal handles local behavior:
+
+```html
+<!-- htmx handles the AJAX; surreal handles the local behavior -->
+<button hx-post="/do-thing" hx-swap="outerHTML">
+  Do thing
+  <script>
+    me().on("htmx:afterRequest", ev => {
+      me(ev).classAdd("done")
+    })
+  </script>
+</button>
+```
+
+---
+
+## Using Globals vs Namespaced
+
+`globalsAdd()` exposes everything (`me`, `any`, `sleep`, etc.) globally by default.
+Remove `globalsAdd()` for fully namespaced:
+
+```js
+surreal.me().classAdd('red')
+surreal.classAdd(surreal.me(), 'red')
+```
+
+---
+
+## Writing a Plugin
+
+```js
+function pluginHighlight(e) {
+  e.highlight = (color = "yellow") => {
+    e.styles({ background: color })
+    return e   // always return e for chainability
+  }
+}
+surreal.plugins.push(pluginHighlight)
+
+// Now usable everywhere:
+me().highlight("pink")
+```
+
+---
+
+## Things Surreal Does NOT Need to Handle (Use Vanilla JS)
+
+```js
+// Text content
+me().textContent = "safe text"
+me().innerHTML   = "<p>html</p>"
+
+// Children
+me().children
+me().prepend(newEl)
+me().appendChild(newEl)
+
+// AJAX → use fetch() or htmx
+me().on("click", async ev => {
+  let res = await fetch("/endpoint")
+  if (res.ok) me(ev).innerHTML = await res.text()
+})
+
+// Logging
+console.log(), console.warn()
+monitorEvents(me())   // Chrome DevTools event monitor
+```
+
+---
+
+## Key Reminders
+
+1. `me()` = **single element** (parent `<script>` by default)
+2. `any()` = **array** of elements
+3. In `async` handlers, **save `me(ev)` before first `await`** — event target lost after async gaps.
+4. `sleep()` needs `await` inside `async` function.
+5. `type="module"` loses parent-element scoping — use explicit selector with `me()`.
+6. Naming flexible: `classAdd` = `class_add` = `addClass` = `add_class`.
+
+</surreal-js>
+<tuicr>
+---
+name: tuicr
+description: Use tuicr's review CLI to read and add comments in active TUI review sessions, and launch tuicr in tmux/zellij when a user needs an interactive review pane.
+---
+
+# tuicr Review Workflow
+
+Use `tuicr review` as the default agent interface. The TUI is where the human
+reviews code; the CLI is how the agent discovers active sessions, reads user
+comments, and, only when appropriate, adds agent-authored comments.
+
+## Core Rule
+
+First decide which workflow the user is asking for:
+
+1. **User-led review of agent-generated changes**
+   - The user wants to inspect the patch and write comments in tuicr.
+   - Your job is to open or find the session, then retrieve the user's comments
+     with `tuicr review comments` when they say comments are ready. If you are
+     explicitly waiting while the user reviews, poll the same command
+     periodically and look for new comment IDs.
+   - Do not add your own review comments, do not preemptively review your own
+     patch, and do not impersonate the user's comments.
+
+2. **Agent review of an AI-generated patch**
+   - The user wants you to understand, critique, or summarize a patch.
+   - You may inspect the patch and propose findings.
+   - If you can confidently identify this workflow and the target session, add
+     findings directly with `tuicr review add` and an explicit `--username`
+     identifying the agent. Ask first when the workflow or session is ambiguous.
+
+If the user's intent is ambiguous, ask which workflow they want.
+
+## Attach To A Session
+
+1. Determine the repository directory from the user's request, current working
+   directory, or recent file operations. Ask if it is ambiguous.
+
+2. List persisted sessions:
+
+   ```bash
+   tuicr review list --repo /path/to/repo   # checkout + its repo's PR sessions
+   tuicr review list --repo owner/repo      # all sessions for a forge repo
+   tuicr review list --all                  # every session across all repos
+   ```
+
+   `--repo` is a selector: a checkout path also surfaces PR sessions for that
+   checkout's `origin` repo, and a forge coordinate like `owner/repo` matches
+   local and PR sessions by owner/repo. Each row carries a `kind` (`local` or
+   `pr`) and a usable `slug`. Use `--all` when you don't know the repo.
+
+3. Choose the session:
+   - If the CLI clearly reports exactly one relevant active session with
+     `"active": true`, attach to it.
+   - If multiple sessions are active, or the correct session is not clear, ask
+     the user which slug to use.
+   - If the user provided a slug or session JSON path, use it directly.
+   - For a PR review, pass the PR slug from the listing (e.g.
+     `gh:owner/repo/pr/N`) to `--session`; it is self-contained and needs no
+     `--repo`.
+   - If there is no active session, start or wait for one as described below.
+   - Until active-session discovery is formalized as a stable protocol, treat
+     `"active": true` as a convenience signal. If slug resolution fails, ask the
+     user for the slug or repo path used by the session.
+
+The CLI works even if the agent is not running inside tmux or zellij, so do not
+require a multiplexer just to connect to an existing active session.
+
+## Start A Session
+
+When the user needs an interactive tuicr pane and no active session exists:
+
+| Environment | Action |
+|-------------|--------|
+| `$TMUX` is set | Run `tuicr-wrapper.sh /path/to/repo` |
+| `$ZELLIJ` is set | Run `tuicr-wrapper-zellij.sh /path/to/repo` |
+| Neither is set | Tell the user you are waiting for them to start `tuicr` in the repo, then attach with `tuicr review list` after they say it is ready |
+
+If both `$TMUX` and `$ZELLIJ` are set, prefer the innermost multiplexer if that
+is clear; otherwise ask.
+
+Wrapper paths are relative to this skill directory:
+
+```bash
+<skill-directory>/tuicr-wrapper.sh /path/to/repo
+<skill-directory>/tuicr-wrapper-zellij.sh /path/to/repo
+```
+
+If your tool supports command timeouts, use a long timeout, such as 10 minutes,
+because the wrappers wait for the TUI to exit. Once the TUI creates its active
+session, use `tuicr review list --repo /path/to/repo` to capture the slug. If
+your environment cannot run another command while the wrapper is waiting, read
+the comments after the user exits tuicr.
+
+## Read User Comments
+
+This is the main review loop for user-led review.
+
+There is no push stream from tuicr to the agent. Read comments by running the
+CLI on demand. After the user says comments are ready, or after the TUI exits,
+run:
+
+```bash
+tuicr review comments --repo /path/to/repo --session <slug>
+```
+
+The command emits JSON. Each comment includes fields like:
+
+- `id`
+- `location`
+- `path`
+- `start_line`
+- `end_line`
+- `side`
+- `comment_type`
+- `lifecycle_state`
+- `content`
+
+Treat these comments as the user's review feedback:
+
+- `issue`: blocking problem to fix first
+- `suggestion`: consider implementing or explain why not
+- `note`: answer or acknowledge
+- `praise`: no action required
+
+If you are waiting during an active review, poll this command about every 30
+seconds and compare comment IDs with the previous result. Read immediately when
+the user says comments are ready. Stop polling once the user says the review is
+done or your tooling would block other work.
+
+If the result is empty, ask whether the user saved comments in the intended
+session or whether another active session should be selected. If the review may
+have continued while you were working, rerun `tuicr review comments` before
+claiming completion.
+
+## Add Agent Comments
+
+Only add comments when the workflow allows it and, for agent-authored review,
+after the user approves writing them into tuicr.
+
+Defaults:
+
+- Prefer line comments when a specific file and line are known.
+- Use file comments for file-scoped feedback.
+- Use review-level comments only for whole-review summaries.
+- Use `--type issue` for problems by default.
+- Use `suggestion`, `note`, or `praise` when that better matches the intent.
+- Pass `--username` so agent comments are visually distinguishable.
+
+Examples:
+
+```bash
+tuicr review add --repo /path/to/repo --session <slug> \
+  --target-file src/main.rs \
+  --line 42 \
+  --side new \
+  --type issue \
+  --username "Codex" \
+  "Handle the empty case here."
+```
+
+```bash
+tuicr review add --repo /path/to/repo --session <slug> \
+  --target-file src/main.rs \
+  --type suggestion \
+  --username "Codex" \
+  "Consider splitting this file-level concern into a helper."
+```
+
+Omit `--target-file` for a review-level comment. Add `--end-line` for a range
+comment. Use `--side old` for removed lines and `--side new` for added or
+unchanged lines in the new file.
+
+For structured input, use `--input` with literal JSON, `@path/to/file.json`, or
+`-` for stdin. Supported target types are `review`, `file`, `line`, and
+`line_range`.
+
+## Legacy Export Output
+
+Older wrapper-driven flows may emit:
+
+```text
+=== TUICR INSTRUCTIONS ===
+...
+=== END TUICR INSTRUCTIONS ===
+```
+
+If present, process those instructions. Otherwise prefer
+`tuicr review comments`; it is the primary source of review feedback. If the
+wrapper mentions clipboard export, ask the user to paste it only when the CLI
+comments are unavailable.
+
+## Multiplexer Tips
+
+tmux:
+
+- Switch panes: `Ctrl-b` then arrow keys
+- Close tuicr: press `q`
+- Resize panes: `Ctrl-b` then `Ctrl-arrow`
+- Zoom pane: `Ctrl-b` then `z`
+
+zellij:
+
+- Switch panes: `Alt` + arrow keys
+- Close tuicr: press `q`
+- Resize panes: `Ctrl-n`, then arrow keys
+- Toggle fullscreen: `Alt-f`
+- Cycle stacked panes: `Alt` + `[` / `]`
+
+## Error Handling
+
+| Situation | Action |
+|-----------|--------|
+| Multiple plausible active sessions | Ask which session slug to use |
+| No active session, tmux/zellij available | Start a new tuicr pane with the matching wrapper |
+| No active session, no multiplexer | Tell the user you are waiting for them to start `tuicr` |
+| `tuicr` not installed | Tell the user to install tuicr |
+| Not a repository | Ask for the correct repo directory |
+| Comments are empty | Confirm the selected session or ask the user to save/add comments |
+
+## When Not To Use
+
+- The user only wants raw `git diff` output.
+- The user explicitly asks for a non-tuicr review workflow.
+- The task is remote PR review and no tuicr PR session is involved.
+
+</tuicr>
+<Location><File>/home/jenkin/workspace/neovim/flake.nix</File><Function>range(point(28,1),point(33,57))</Function></Location>
+<FunctionText>      gitRev =
+        if self ? rev
+        then self.rev
+        else if self ? dirtyRev
+        then builtins.substring 0 40 self.dirtyRev
+        else "0000000000000000000000000000000000000000";</FunctionText>
