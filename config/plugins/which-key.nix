@@ -6,6 +6,7 @@
       plugins.marks = false;
       spec = [
         # Top-level leader groups
+        { __unkeyed-1 = "<leader>a"; group = "AI (Sidekick)"; }
         { __unkeyed-1 = "<leader>b"; group = "Buffer"; }
         { __unkeyed-1 = "<leader>B"; group = "Bookmarks"; }
         { __unkeyed-1 = "<leader>c"; group = "Code"; }

@@ -25,7 +25,7 @@
     ./jj.nix
     ./octo.nix
     ./codecompanion.nix
-    # ./sidekick.nix
+    ./sidekick.nix
     ./dressing.nix
     ./render-markdown.nix
     ./reticle.nix
