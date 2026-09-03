@@ -86,7 +86,7 @@
     {
       mode = "n";
       key = "<leader>r";
-      action = "<cmd>LspRestart<cr>";
+      action = "<cmd>lsp restart<cr>";
       options = {
         silent = true;
         noremap = true;
