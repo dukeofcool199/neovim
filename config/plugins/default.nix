@@ -7,6 +7,7 @@
     ./bufferline.nix
     ./cmp.nix
     ./oil.nix
+    ./oil-git.nix
     ./trouble.nix
     ./hop.nix
     ./quickfix.nix

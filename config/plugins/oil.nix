@@ -90,6 +90,12 @@
         show_hidden = true;
         natural_order = "fast";
         case_insensitive = false;
+        is_always_hidden.__raw = ''
+          function(name, bufnr)
+            local ok, filter = pcall(require, "oil-jj-filter")
+            return ok and filter.hidden(name, bufnr) or false
+          end
+        '';
         sort = [
           {
             __unkeyed-1 = "type";
@@ -136,11 +142,88 @@
     };
   };
 
+  # oil-jj-filter: open oil at the repo root showing only files changed in @
+  # (or @- when @ is empty). <leader>- / g- open the filtered view; - / <C-n> clear it.
+  extraConfigLua = ''
+    package.preload["oil-jj-filter"] = function()
+      local M = { active = false, files = {} }
+
+      local function rerender()
+        local ok, view = pcall(require, "oil.view")
+        if ok and view.rerender_all_oil_buffers then
+          view.rerender_all_oil_buffers({ refetch = false })
+        end
+      end
+
+      function M.hidden(name, bufnr)
+        if not M.active then
+          return false
+        end
+        local dir = require("oil").get_current_dir(bufnr)
+        if not dir then
+          return false
+        end
+        return not M.files[(dir .. name):gsub("/$", "")]
+      end
+
+      function M.open()
+        local root = vim.trim(vim.fn.system("jj root 2>/dev/null"))
+        if vim.v.shell_error ~= 0 then
+          return vim.notify("Not in a jj repository", vim.log.levels.ERROR)
+        end
+        local files, count = { [root] = true }, 0
+        for _, rev in ipairs({ "@", "@-" }) do
+          local out = vim.fn.system(
+            "jj diff --summary --no-pager --color never -r " .. rev .. " 2>/dev/null"
+          )
+          for _, line in ipairs(vim.split(out, "\n", { plain = true })) do
+            local path = line:match("^[MADRC]%s+(.+)$")
+            if path then
+              -- renames print as "R path/{old => new}/rest"
+              path = path:gsub("{.- => (.-)}", "%1"):gsub("//+", "/")
+              files[root .. "/" .. path] = true
+              count = count + 1
+              local dir = path:match("^(.*)/[^/]+$")
+              while dir do
+                files[root .. "/" .. dir] = true
+                dir = dir:match("^(.*)/[^/]+$")
+              end
+            end
+          end
+          if count > 0 then
+            vim.notify(("Oil: %d file(s) changed in %s"):format(count, rev))
+            break
+          end
+        end
+        if count == 0 then
+          return vim.notify("No changes in @ or @-", vim.log.levels.INFO)
+        end
+        M.files, M.active = files, true
+        rerender()
+        require("oil").open(root)
+      end
+
+      function M.clear()
+        if M.active then
+          M.active = false
+          rerender()
+        end
+      end
+
+      return M
+    end
+  '';
+
   keymaps = [
     {
       mode = "n";
       key = "-";
-      action = "<cmd>Oil<cr>";
+      action.__raw = ''
+        function()
+          require("oil-jj-filter").clear()
+          require("oil").open()
+        end
+      '';
       options = {
         desc = "Open Oil";
         silent = true;
@@ -149,9 +232,40 @@
     {
       mode = "n";
       key = "<C-n>";
-      action = "<cmd>Oil<cr>";
+      action.__raw = ''
+        function()
+          require("oil-jj-filter").clear()
+          require("oil").open()
+        end
+      '';
       options = {
         desc = "Open Oil";
+        silent = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>-";
+      action.__raw = ''
+        function()
+          require("oil-jj-filter").open()
+        end
+      '';
+      options = {
+        desc = "Open Oil (jj changed files)";
+        silent = true;
+      };
+    }
+    {
+      mode = "n";
+      key = "g-";
+      action.__raw = ''
+        function()
+          require("oil-jj-filter").open()
+        end
+      '';
+      options = {
+        desc = "Open Oil (jj changed files)";
         silent = true;
       };
     }
