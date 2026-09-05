@@ -1,4 +1,6 @@
 {pkgs, ...}: let
+  claudeModel = "claude-sonnet-5";
+
   sidekick-nvim = pkgs.vimUtils.buildVimPlugin {
     name = "sidekick.nvim";
     src = pkgs.fetchFromGitHub {
@@ -28,6 +30,9 @@ in {
             },
           },
           tools = {
+            claude = {
+              cmd = { "claude", "--model", "${claudeModel}" },
+            },
             aider = {
               -- aider only offers `/add` for words that match a repo path verbatim,
               -- so drop the `@` prefix and `:` separator the default location format adds
