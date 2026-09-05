@@ -28,6 +28,19 @@ There is no test suite or linter — validation is done by building (`nix build`
 
 This repo uses **Jujutsu (jj)** as primary VCS (colocated with git). Always prefer `jj` commands over `git`. After making changes, run `jj git export` to sync to the git backend.
 
+## Keybinding Constraints
+
+Do not propose these — they are already taken or physically ambiguous:
+
+- **Alt/Meta chords (`<A-...>`, `<M-...>`) are unavailable.** The window manager consumes them.
+- `<C-S-n>` and `<C-->` are consumed by ghostty/the WM.
+- `<C-j>` is byte 0x0A (LF), indistinguishable from an Enter-family key that sends LF.
+  `~/.config/ghostty/config` has `keybind = shift+enter=text:\n`, so Shift+Enter fires
+  any `<C-j>` mapping. Don't map `<C-j>`.
+  (`<C-h>` is 0x08 and is fine — ghostty sends 0x7f for Backspace. Verified.)
+
+Prefer `g`-prefix chords, `<leader>` sequences, or unused punctuation.
+
 ## Architecture
 
 **Entry point:** `flake.nix` — Nix flake that builds Neovim via `nixvim.makeNixvimWithModule`, importing `./config`.
