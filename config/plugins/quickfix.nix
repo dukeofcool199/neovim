@@ -294,42 +294,6 @@
         end
       end,
     })
-
-    -- Load a jj diff summary into the quickfix list
-    vim.api.nvim_create_user_command("JjQf", function(opts)
-      local revset = opts.args ~= "" and opts.args or "@"
-      local cmd = "jj diff --summary -r " .. vim.fn.shellescape(revset)
-      local output = vim.fn.system(cmd)
-      if vim.v.shell_error ~= 0 then
-        vim.notify("jj diff failed: " .. output, vim.log.levels.ERROR)
-        return
-      end
-
-      local items = {}
-      for _, line in ipairs(vim.split(output, "\n", { plain = true })) do
-        local status, path = line:match("^([MADR])%s+(.+)$")
-        if status and path then
-          if status == "R" then
-            local new_path = path:match("^.+%s+→%s+(.+)$")
-            if new_path then
-              path = vim.trim(new_path)
-            end
-          end
-          table.insert(items, {
-            filename = path,
-            lnum = 1,
-            text = status .. " " .. path,
-          })
-        end
-      end
-
-      vim.fn.setqflist({}, "r", { items = items, title = "jj diff " .. revset })
-      if #items > 0 then
-        vim.cmd("copen")
-      else
-        vim.notify("No changed files for revset: " .. revset, vim.log.levels.INFO)
-      end
-    end, { nargs = "?", complete = "file" })
   '';
 
   keymaps = [
@@ -446,12 +410,6 @@
       key = "<leader>qT";
       action = "<cmd>Telescope loclist<cr>";
       options = { desc = "Telescope loclist"; silent = true; };
-    }
-    {
-      mode = "n";
-      key = "<leader>qj";
-      action = "<cmd>JjQf<cr>";
-      options = { desc = "jj diff to quickfix"; silent = true; };
     }
     {
       mode = "n";
