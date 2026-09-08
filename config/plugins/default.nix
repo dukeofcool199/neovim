@@ -8,9 +8,10 @@
     ./cmp.nix
     ./oil.nix
     ./oil-git.nix
-    ./trouble.nix
     ./hop.nix
     ./quickfix.nix
+    ./gh-qf.nix
+    ./jj-qf.nix
     ./gitsigns.nix
     ./which-key.nix
     ./toggleterm.nix
