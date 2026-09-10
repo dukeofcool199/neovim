@@ -1,5 +1,4 @@
-{ ... }:
-{
+{...}: {
   plugins.lualine = {
     enable = true;
 
@@ -13,7 +12,7 @@
           right = "";
         };
         disabled_filetypes = {
-          winbar = [ "dashboard" "NvimTree" ];
+          winbar = ["dashboard" "NvimTree"];
         };
       };
 
@@ -52,13 +51,24 @@
           {
             __unkeyed-1.__raw = ''
               function()
+                if _G.minuet_lualine then
+                  return _G.minuet_lualine()
+                end
+                return ""
+              end
+            '';
+            color = {fg = "#8ec07c";};
+          }
+          {
+            __unkeyed-1.__raw = ''
+              function()
                 if _G.scripture_lualine then
                   return _G.scripture_lualine()
                 end
                 return ""
               end
             '';
-            color = { fg = "#d4a959"; };
+            color = {fg = "#d4a959";};
           }
           {
             __unkeyed-1.__raw = ''
@@ -69,7 +79,7 @@
                 return ""
               end
             '';
-            color = { fg = "#d4a959"; };
+            color = {fg = "#d4a959";};
             cond.__raw = ''
               function()
                 return vim.o.columns > 80
@@ -77,7 +87,7 @@
             '';
           }
         ];
-        lualine_y = [ "filetype" "progress" ];
+        lualine_y = ["filetype" "progress"];
         lualine_z = [
           {
             __unkeyed-1 = "location";
@@ -116,9 +126,9 @@
           }
           "branch"
         ];
-        lualine_c = [ "fileformat" "diagnostics" "lsp_progress" ];
-        lualine_x = [ ];
-        lualine_y = [ "filetype" "progress" ];
+        lualine_c = ["fileformat" "diagnostics" "lsp_progress"];
+        lualine_x = [];
+        lualine_y = ["filetype" "progress"];
         lualine_z = [
           {
             __unkeyed-1 = "location";
@@ -131,9 +141,9 @@
         ];
       };
 
-      tabline = { };
+      tabline = {};
 
-      extensions = [ "quickfix" "nvim-tree" "toggleterm" "fzf" ];
+      extensions = ["quickfix" "nvim-tree" "toggleterm" "fzf"];
     };
   };
 

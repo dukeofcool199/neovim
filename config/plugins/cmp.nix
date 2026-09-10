@@ -1,9 +1,11 @@
-{ ... }:
-{
+{...}: {
   plugins.cmp = {
     enable = true;
 
     settings = {
+      # Minuet round-trips an LLM; cmp's 500ms default drops the results.
+      performance.fetching_timeout = 2000;
+
       snippet = {
         expand = ''
           function(args)
@@ -46,8 +48,9 @@
       };
 
       sources = [
-        { name = "nvim_lsp"; }
-        { name = "luasnip"; }
+        {name = "nvim_lsp";}
+        {name = "luasnip";}
+        {name = "minuet";}
       ];
     };
   };
