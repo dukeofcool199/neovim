@@ -22,6 +22,16 @@
       local jobs = {}
       local n = 0
 
+      -- Linked once, and re-linked on colorscheme changes so it survives a
+      -- theme switch.
+      local function ensure_hl()
+        if vim.fn.hlexists("AiGhost") == 0 or vim.api.nvim_get_hl(0, {name = "AiGhost"}).link == nil then
+          vim.api.nvim_set_hl(0, "AiGhost", {link = "DiagnosticVirtualTextHint", default = true})
+        end
+      end
+      ensure_hl()
+      vim.api.nvim_create_autocmd("ColorScheme", {callback = ensure_hl})
+
       local function clear(job)
         if job.timer then
           job.timer:stop()
@@ -35,6 +45,20 @@
         end
       end
 
+      --- Ghost text at the point of invocation: which tool is working, on
+      --- which provider and model, and how long it has been going. The
+      --- elapsed time only appears after a second, so quick edits stay quiet
+      --- but a slow local model visibly makes progress.
+      local function text(job)
+        local ok, ai = pcall(require, "ai")
+        local what = (ok and job.role) and ai.describe(job.role) or (job.label or "thinking")
+        local secs = (vim.uv.now() - job.started) / 1000
+        if secs >= 1 then
+          return string.format("%s %s  %.1fs", FRAMES[job.frame], what, secs)
+        end
+        return string.format("%s %s", FRAMES[job.frame], what)
+      end
+
       local function draw(job)
         if not (job.buf and vim.api.nvim_buf_is_valid(job.buf)) then
           return
@@ -42,7 +66,7 @@
         local line = math.min(job.line, vim.api.nvim_buf_line_count(job.buf) - 1)
         vim.api.nvim_buf_clear_namespace(job.buf, ns, 0, -1)
         pcall(vim.api.nvim_buf_set_extmark, job.buf, ns, line, 0, {
-          virt_text = {{" " .. FRAMES[job.frame] .. " " .. job.label, "Comment"}},
+          virt_text = {{" " .. text(job), "AiGhost"}},
           virt_text_pos = "eol",
           hl_mode = "combine",
         })
@@ -51,7 +75,7 @@
       --- Begin indicating progress for request `id`.
       --- Anchors to the current buffer and cursor line unless that buffer is
       --- a chat, which draws its own.
-      function M.start(id, label, role)
+      function M.start(id, role, label)
         if jobs[id] then
           return
         end
@@ -61,7 +85,7 @@
           role = role,
           buf = inline and buf or nil,
           line = inline and (vim.api.nvim_win_get_cursor(0)[1] - 1) or 0,
-          label = label or "thinking",
+          label = label,
           frame = 1,
           started = vim.uv.now(),
         }
@@ -172,7 +196,7 @@
           -- buffer decides: a chat buffer is `ask`, anything else is an
           -- inline edit in your own code.
           local role = vim.bo[vim.api.nvim_get_current_buf()].filetype == "codecompanion" and "ask" or "edit"
-          require("ai.progress").start(data.id or "?", adapter.formatted_name or adapter.name or "thinking", role)
+          require("ai.progress").start(data.id or "?", role, adapter.formatted_name or adapter.name)
         end,
       })
 
@@ -204,7 +228,7 @@
           local data = ev.data or {}
           duet_expected = data.n_requests or 1
           duet_done = 0
-          require("ai.progress").start(DUET, "next edit", "next-edit")
+          require("ai.progress").start(DUET, "next-edit")
         end,
       })
 

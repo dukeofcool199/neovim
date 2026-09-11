@@ -186,6 +186,31 @@ in {
 
         M.get = M.role
 
+        local LABEL = {
+          completion = "cmp",
+          ["next-edit"] = "next",
+          edit = "edit",
+          ask = "ask",
+          agent = "agent",
+        }
+
+        --- Short name for a role, as shown in the statusline and the ghost
+        --- text beside an in-flight edit.
+        function M.label(name)
+          return LABEL[name] or name
+        end
+
+        --- "edit ollama/qwen2.5-coder:3b-instruct" -- tool, provider, model.
+        function M.describe(name)
+          local r = M.role(name)
+          if not r then
+            return name
+          end
+          local provider = r.endpoint or r.backend or r.command or "?"
+          local model = (r.model or "?"):gsub("^.-/", "")
+          return string.format("%s %s/%s", M.label(name), provider, model)
+        end
+
         function M.endpoints()
           local names = vim.tbl_keys(registry.endpoints)
           table.sort(names)
@@ -503,16 +528,7 @@ in {
       --
       -- Segments are separate lualine components (see lualine.nix) so each
       -- gets its own colour without embedding highlight escapes in a string.
-      local LABEL = {
-        completion = "cmp",
-        ["next-edit"] = "next",
-        edit = "edit",
-        ask = "ask",
-        agent = "agent",
-      }
-
-      --- Width each segment needs, so narrow windows drop the least useful
-      --- ones instead of wrapping.
+      --- Width-ordered: the least useful segment is dropped first.
       local PRIORITY = {"edit", "ask", "completion", "next-edit", "agent"}
 
       _G.ai_lualine_role = function(name)
@@ -520,18 +536,15 @@ in {
         if not ok then
           return ""
         end
-        local r = ai.role(name)
-        if not r then
+        if not ai.role(name) then
           return ""
         end
-        local provider = r.endpoint or r.backend or r.command or "?"
-        local model = (r.model or "?"):gsub("^.-/", "")
         local spin = ""
         local okp, progress = pcall(require, "ai.progress")
         if okp and progress.running(name) then
           spin = progress.frame() .. " "
         end
-        return string.format("%s%s %s/%s", spin, LABEL[name] or name, provider, model)
+        return spin .. ai.describe(name)
       end
 
       --- Which segments fit right now. Packed by real rendered width rather
