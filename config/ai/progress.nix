@@ -152,6 +152,41 @@
         end,
       })
 
+      -- minuet duet (next-edit prediction) -> ai.progress. Duet has its own
+      -- event namespace, separate from minuet's completion events, which are
+      -- deliberately left alone: completion fires on every keystroke and a
+      -- spinner there would only flicker.
+      --
+      -- StartedPre is the start signal; it fires before the job is spawned.
+      -- The payload carries n_requests, so finishes are counted rather than
+      -- assumed to be one. minuet returns early without firing Finished when
+      -- a job fails to spawn outright, which is what the timeout in
+      -- ai.progress is there to catch.
+      local duet_expected, duet_done = 0, 0
+      local DUET = "minuet-duet"
+
+      vim.api.nvim_create_autocmd("User", {
+        group = group,
+        pattern = "MinuetDuetRequestStartedPre",
+        callback = function(ev)
+          local data = ev.data or {}
+          duet_expected = data.n_requests or 1
+          duet_done = 0
+          require("ai.progress").start(DUET, "next edit")
+        end,
+      })
+
+      vim.api.nvim_create_autocmd("User", {
+        group = group,
+        pattern = "MinuetDuetRequestFinished",
+        callback = function()
+          duet_done = duet_done + 1
+          if duet_done >= duet_expected then
+            require("ai.progress").stop(DUET)
+          end
+        end,
+      })
+
       -- Belt and braces: the inline interaction signals its own completion,
       -- and a stopped chat never emits RequestFinished at all.
       vim.api.nvim_create_autocmd("User", {
