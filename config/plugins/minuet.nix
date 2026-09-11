@@ -12,15 +12,15 @@
 
   opencodeGoDuet = {
     name = "OpenCode Go";
-    end_point = "${url "duet-remote"}/v1/chat/completions";
-    api_key = key "duet-remote";
-    model = "${(role "duet-remote").model}";
+    end_point = "${url "next-edit-remote"}/v1/chat/completions";
+    api_key = key "next-edit-remote";
+    model = "${(role "next-edit-remote").model}";
     request_timeout = 20;
     transform = [
       {
         __raw = ''
           function(data)
-            data.headers = vim.tbl_extend("force", data.headers, require("minuet-opencode").headers("duet"))
+            data.headers = vim.tbl_extend("force", data.headers, require("minuet-opencode").headers("next-edit"))
             return data
           end
         '';
@@ -30,9 +30,9 @@
 
   ollamaDuet = {
     name = "Ollama";
-    end_point = "${url "duet"}/v1/chat/completions";
-    api_key = key "duet";
-    model = "${(role "duet").model}";
+    end_point = "${url "next-edit"}/v1/chat/completions";
+    api_key = key "next-edit";
+    model = "${(role "next-edit").model}";
     request_timeout = 180;
     transform = [];
   };
@@ -56,9 +56,9 @@ in {
       provider_options = {
         openai_fim_compatible = {
           name = "Ollama";
-          end_point = "${url "fim"}/v1/completions";
-          api_key = key "fim";
-          model = "${(role "fim").model}";
+          end_point = "${url "completion"}/v1/completions";
+          api_key = key "completion";
+          model = "${(role "completion").model}";
           stream = true;
           optional = {
             max_tokens = 56;
@@ -89,15 +89,15 @@ in {
 
         openai_compatible = {
           name = "OpenCode Go";
-          end_point = "${url "fim-remote"}/v1/chat/completions";
-          api_key = key "fim-remote";
-          model = "${(role "fim-remote").model}";
+          end_point = "${url "completion-remote"}/v1/chat/completions";
+          api_key = key "completion-remote";
+          model = "${(role "completion-remote").model}";
           stream = true;
           transform = [
             {
               __raw = ''
                 function(data)
-                  data.headers = vim.tbl_extend("force", data.headers, require("minuet-opencode").headers("fim"))
+                  data.headers = vim.tbl_extend("force", data.headers, require("minuet-opencode").headers("completion"))
                   return data
                 end
               '';
@@ -109,13 +109,13 @@ in {
       presets = {
         fast = {
           provider = "openai_fim_compatible";
-          provider_options.openai_fim_compatible.model = "${(role "fim").model}";
+          provider_options.openai_fim_compatible.model = "${(role "completion").model}";
           context_window = 1024;
           request_timeout = 10;
         };
         big = {
           provider = "openai_fim_compatible";
-          provider_options.openai_fim_compatible.model = "${registry.tiers.big.fim.model}";
+          provider_options.openai_fim_compatible.model = "${registry.tiers.big.completion.model}";
           context_window = 4096;
           request_timeout = 20;
         };
@@ -221,7 +221,7 @@ in {
         local minuet = require("minuet")
         local labels, keys = {}, {}
 
-        if target == "duet" then
+        if target == "next-edit" then
           for _, key in ipairs(require("minuet-project").duet_backends) do
             local name = minuet.config.duet.provider_options[key].name
             table.insert(labels, name)
@@ -240,18 +240,18 @@ in {
         return labels, keys
       end
 
-      --- Pick the backend for "completion" (default) or "duet", then its model.
+      --- Pick the backend for "completion" (default) or "next-edit", then its model.
       function M.choose(target)
         local labels, keys = backends(target)
 
         vim.ui.select(labels, {
-          prompt = (target == "duet" and "Duet" or "Completion") .. " backend:",
+          prompt = (target == "next-edit" and "Duet" or "Completion") .. " backend:",
         }, function(label)
           if not label then
             return
           end
 
-          if target == "duet" then
+          if target == "next-edit" then
             require("minuet-project").duet_backend(keys[label])
           else
             require("minuet").change_provider(keys[label])
@@ -261,15 +261,15 @@ in {
         end)
       end
 
-      --- Pick a model for "completion" (default) or "duet" from the live provider.
+      --- Pick a model for "completion" (default) or "next-edit" from the live provider.
       function M.pick(target)
         local minuet = require("minuet")
-        local scope = target == "duet" and minuet.config.duet or minuet.config
+        local scope = target == "next-edit" and minuet.config.duet or minuet.config
         local opts = scope.provider_options[scope.provider]
 
         fetch(opts, function(models)
           vim.ui.select(models, {
-            prompt = ("%s model (%s):"):format(target == "duet" and "Duet" or "Completion", opts.name),
+            prompt = ("%s model (%s):"):format(target == "next-edit" and "Duet" or "Completion", opts.name),
           }, function(choice)
             if not choice then
               return
@@ -341,7 +341,7 @@ in {
       --- registry so :AiStatus stays truthful; the listener below writes it
       --- into minuet's live config.
       function M.model(name)
-        require("ai").set("fim", name)
+        require("ai").set("completion", name)
       end
 
       --- Route completions through the remote OpenCode Go endpoint.
@@ -424,7 +424,7 @@ in {
 
       --- Set the model duet's current provider uses.
       function M.duet_model(name)
-        require("ai").set("duet", name)
+        require("ai").set("next-edit", name)
       end
 
       M.duet_backends = { "go", "ollama" }
@@ -491,13 +491,13 @@ in {
           return
         end
         local cfg = require("minuet").config
-        if name == "fim" then
+        if name == "completion" then
           cfg.provider_options.openai_fim_compatible.model = r.model
           cfg.provider_options.openai_fim_compatible.end_point = r.url .. "/v1/completions"
-        elseif name == "fim-remote" then
+        elseif name == "completion-remote" then
           cfg.provider_options.openai_compatible.model = r.model
           cfg.provider_options.openai_compatible.end_point = r.url .. "/v1/chat/completions"
-        elseif name == "duet" then
+        elseif name == "next-edit" then
           local slot = cfg.duet.provider_options[cfg.duet.provider]
           if slot then
             slot.model = r.model
@@ -509,7 +509,7 @@ in {
         end)
       end
       ai.on_change(apply)
-      for _, name in ipairs({"fim", "fim-remote", "duet"}) do
+      for _, name in ipairs({"completion", "completion-remote", "next-edit"}) do
         apply(name, ai.role(name))
       end
     end

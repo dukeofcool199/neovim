@@ -34,7 +34,7 @@ in {
           extend = {
             anthropic.env.api_key.__raw = "function() return require('ai.auth').get('anthropic') end";
             openrouter.env.api_key.__raw = "function() return require('ai.auth').get('openrouter') end";
-            ollama.env.url.__raw = "function() return '${url "inline"}' end";
+            ollama.env.url.__raw = "function() return '${url "edit"}' end";
           };
 
           # OpenCode Go over the openai_compatible shim. schema.model.default
@@ -49,7 +49,7 @@ in {
                   api_key = function()
                     return require("ai.auth").get("opencode-go")
                   end,
-                  url = "${url "fim-remote"}",
+                  url = "${url "completion-remote"}",
                   chat_url = "/v1/chat/completions",
                   models_endpoint = "/v1/models",
                 },
@@ -62,7 +62,7 @@ in {
                 },
                 schema = {
                   model = {
-                    default = "${(role "fim-remote").model}",
+                    default = "${(role "completion-remote").model}",
                   },
                 },
               })
@@ -75,15 +75,15 @@ in {
         # opencode is an ACP adapter: it spawns `opencode acp` and authenticates
         # itself, so chat and agent need no credential from Neovim.
         agent = {
-          adapter = "${(role "chat").acp}";
+          adapter = "${(role "ask").backend}";
         };
         chat = {
-          adapter = "${(role "chat").acp}";
+          adapter = "${(role "ask").backend}";
         };
         # Inline needs an HTTP adapter; ACP cannot serve it. Local ollama by
         # default — the previous `copilot` had no credential on this machine.
         inline = {
-          adapter = "${(role "inline").adapter}";
+          adapter = "${(role "edit").backend}";
         };
       };
     };
@@ -101,20 +101,20 @@ in {
         if not r then
           return
         end
-        if name == "inline" then
-          if r.adapter then
-            cc.interactions.inline.adapter = r.adapter
+        if name == "edit" then
+          if r.backend then
+            cc.interactions.inline.adapter = r.backend
           end
-          if r.model and cc.adapters.http.extend and cc.adapters.http.extend[r.adapter] then
-            cc.adapters.http.extend[r.adapter].schema =
-              vim.tbl_deep_extend("force", cc.adapters.http.extend[r.adapter].schema or {}, {
+          if r.model and cc.adapters.http.extend and cc.adapters.http.extend[r.backend] then
+            cc.adapters.http.extend[r.backend].schema =
+              vim.tbl_deep_extend("force", cc.adapters.http.extend[r.backend].schema or {}, {
                 model = {default = r.model},
               })
           end
-        elseif name == "chat" then
-          if r.adapter then
-            cc.interactions.chat.adapter = r.adapter
-            cc.interactions.agent.adapter = r.adapter
+        elseif name == "ask" then
+          if r.backend then
+            cc.interactions.chat.adapter = r.backend
+            cc.interactions.agent.adapter = r.backend
           end
           -- Retarget any chat buffer that is already open.
           local ok, chat_mod = pcall(require, "codecompanion.interactions.chat")

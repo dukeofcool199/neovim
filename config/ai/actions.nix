@@ -18,7 +18,7 @@
       end
 
       function M.ask_pick()
-        require("ai").pick("chat", function()
+        require("ai").pick("ask", function()
           vim.cmd("CodeCompanionChat")
         end)
       end
@@ -64,7 +64,7 @@
       end
 
       function M.edit_pick()
-        require("ai").pick("inline", function()
+        require("ai").pick("edit", function()
           M.edit()
         end)
       end
@@ -72,7 +72,7 @@
       -- Do ----------------------------------------------------------------
       function M.agent()
         local r = require("ai").role("agent")
-        cli().toggle({name = (r and r.cli) or "claude", focus = true})
+        cli().toggle({name = (r and r.command) or "claude", focus = true})
       end
 
       function M.agent_pick()
@@ -157,7 +157,7 @@
       end
 
       -- Control -----------------------------------------------------------
-      local CONTROL = {
+      local SETTINGS = {
         {"Model...", "AiPick"},
         {"Status", "AiStatus"},
         {"Credentials", "AiAuth"},
@@ -167,13 +167,13 @@
         {"Reset overrides", "AiReset"},
       }
 
-      function M.control_pick()
+      function M.settings_pick()
         local labels = vim.tbl_map(function(e)
           return e[1]
-        end, CONTROL)
+        end, SETTINGS)
         vim.ui.select(labels, {prompt = "AI: models and credentials"}, function(_, idx)
           if idx then
-            vim.cmd(CONTROL[idx][2])
+            vim.cmd(SETTINGS[idx][2])
           end
         end)
       end
@@ -327,7 +327,7 @@
     {
       mode = "n";
       key = "<leader>am";
-      action = act "control_pick()";
+      action = act "settings_pick()";
       options = {
         desc = "Models and credentials";
         silent = true;

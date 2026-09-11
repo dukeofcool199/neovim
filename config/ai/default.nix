@@ -128,12 +128,10 @@ in {
 
         local FIELDS = {
           model = true,
-          adapter = true,
+          backend = true,
           endpoint = true,
           auth = true,
-          acp = true,
-          cli = true,
-          kind = true,
+          command = true,
         }
 
         local function tier_spec(role)
@@ -279,7 +277,7 @@ in {
             table.insert(out, {
               role = name,
               model = r.model,
-              backend = r.adapter or r.acp or r.cli or r.endpoint,
+              backend = r.backend or r.command or r.endpoint,
               auth = r.auth,
               source = r.source,
             })
@@ -294,7 +292,7 @@ in {
           if not r then
             return cb({})
           end
-          local key = r.url or r.acp or r.cli or "?"
+          local key = r.url or r.backend or r.command or "?"
           if model_cache[key] then
             return cb(model_cache[key])
           end
@@ -341,7 +339,7 @@ in {
           if not r then
             return {}
           end
-          local key = r.url or r.acp or r.cli or "?"
+          local key = r.url or r.backend or r.command or "?"
           if not model_cache[key] then
             M.models(name, function() end)
             return {}
@@ -418,7 +416,7 @@ in {
           local r = ai.role(role)
           return r and (r.model or "?"):gsub("^.-/", "") or "?"
         end
-        return string.format("󰚩 %s  %s", short("fim"), short("chat"))
+        return string.format("󰚩 %s  %s", short("completion"), short("ask"))
       end
     end
   '';
@@ -474,15 +472,15 @@ in {
       desc = "AI: pick role then model",
     })
 
-    vim.api.nvim_create_user_command("AiAdapter", function(o)
+    vim.api.nvim_create_user_command("AiBackend", function(o)
       local ai = require("ai")
-      local role, adapter = o.fargs[1], o.fargs[2]
-      if not (role and adapter) then
-        return vim.notify("usage: AiAdapter <role> <adapter>", vim.log.levels.WARN)
+      local role, backend = o.fargs[1], o.fargs[2]
+      if not (role and backend) then
+        return vim.notify("usage: AiBackend <role> <backend>", vim.log.levels.WARN)
       end
-      local r = ai.set(role, {adapter = adapter})
+      local r = ai.set(role, {backend = backend})
       if r then
-        vim.notify("ai: " .. role .. " adapter -> " .. adapter)
+        vim.notify("ai: " .. role .. " backend -> " .. backend)
       end
     end, {
       nargs = "*",
@@ -505,7 +503,7 @@ in {
         table.insert(
           lines,
           string.format(
-            "  %-12s %-30s %-14s %-12s %s",
+            "  %-18s %-28s %-14s %-12s %s",
             r.role,
             tostring(r.model),
             tostring(r.backend),
@@ -514,7 +512,7 @@ in {
           )
         )
       end
-      show(string.format("  %-12s %-30s %-14s %-12s %s", "ROLE", "MODEL", "BACKEND", "AUTH", "SOURCE"), lines)
+      show(string.format("  %-18s %-28s %-14s %-12s %s", "ROLE", "MODEL", "BACKEND", "AUTH", "SOURCE"), lines)
     end, {desc = "AI: role/model status"})
 
     vim.api.nvim_create_user_command("AiAuth", function(o)

@@ -66,7 +66,7 @@ in {
           return
         end
         local cfg = require("sidekick.config")
-        local bin = r.cli or "claude"
+        local bin = r.command or "claude"
         local tool = cfg.cli and cfg.cli.tools and cfg.cli.tools[bin]
         if tool and r.model then
           tool.cmd = {bin, "--model", r.model}

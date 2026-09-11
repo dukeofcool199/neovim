@@ -3,11 +3,21 @@
 # A plain attrset, not a module: consumers `import` it at eval time so the same
 # data shapes both the Nix-side plugin options and the baked `ai` Lua module.
 #
-# auth kinds:
-#   key    - env var first, `pass` consulted only on a miss; both fields optional
-#   static - literal value (ollama ignores it, but the header must exist)
-#   none   - the binary authenticates itself; Neovim supplies nothing
+# Role names match the verbs on the <leader>a keymaps, so what you press and
+# what you configure line up:
+#
+#   ask         <leader>aa  talk about code in a chat buffer
+#   edit        <leader>ae  rewrite a selection or function in place
+#   agent       <leader>ad  hand a task to a CLI agent in a terminal
+#   completion  ghost text / cmp candidates as you type
+#   next-edit   predict the edit you are about to make, then apply it
+#
+# `-remote` variants are the same job against a hosted model instead of the
+# local one; `-local` variants are the reverse. Only one side is ever active.
 {
+  # kind = "key"    -> env var first, `pass` consulted only on a miss
+  # kind = "static" -> literal value (ollama ignores it, but the header must exist)
+  # kind = "none"   -> the binary authenticates itself; Neovim supplies nothing
   auth = {
     ollama = {
       kind = "static";
@@ -28,6 +38,7 @@
       env = "OPENROUTER_API_KEY";
       pass = "ai/openrouter";
     };
+    # The `opencode` and `claude` binaries hold their own credentials.
     opencode-cli = {kind = "none";};
     claude-cli = {kind = "none";};
   };
@@ -38,66 +49,66 @@
   };
 
   # Defaults stay small and identical on both machines: the AMD box has no
-  # discrete VRAM and the 3070 Ti has 8 GB, so anything above ~8 GB spills to
-  # CPU on both. NVIM_AI_TIER=big promotes the roles listed under `tiers`.
+  # discrete VRAM and the 3070 Ti has 8 GB, so anything larger spills to CPU on
+  # both. NVIM_AI_TIER=big promotes the roles listed under `tiers`.
   #
-  # Only the qwen2.5-coder models advertise ollama's `insert` capability, so
-  # fim/duet cannot use anything else.
+  # `completion` and `next-edit` are restricted to the qwen2.5-coder models:
+  # they are the only local ones advertising ollama's `insert` capability,
+  # which is what real fill-in-the-middle needs.
   roles = {
-    fim = {
-      auth = "ollama";
+    completion = {
+      backend = "ollama";
       endpoint = "ollama";
+      auth = "ollama";
       model = "qwen2.5-coder:1.5b-base";
-      kind = "fim";
     };
-    fim-remote = {
-      auth = "opencode-go";
+    # Not fill-in-the-middle: a chat model asked to guess the middle, which is
+    # why it can use a model without `insert`.
+    completion-remote = {
+      backend = "opencode-go";
       endpoint = "opencode-go";
-      model = "glm-5.3-flash";
-      kind = "chat";
-    };
-    duet = {
-      auth = "ollama";
-      endpoint = "ollama";
-      model = "qwen2.5-coder:3b-instruct";
-      kind = "chat";
-    };
-    duet-remote = {
       auth = "opencode-go";
-      endpoint = "opencode-go";
       model = "glm-5.3-flash";
-      kind = "chat";
     };
-    inline = {
-      auth = "ollama";
+    next-edit = {
+      backend = "ollama";
       endpoint = "ollama";
+      auth = "ollama";
       model = "qwen2.5-coder:3b-instruct";
-      adapter = "ollama";
-      kind = "chat";
     };
-    chat = {
-      acp = "opencode";
-      adapter = "opencode";
+    next-edit-remote = {
+      backend = "opencode-go";
+      endpoint = "opencode-go";
+      auth = "opencode-go";
+      model = "glm-5.3-flash";
+    };
+    edit = {
+      backend = "ollama";
+      endpoint = "ollama";
+      auth = "ollama";
+      model = "qwen2.5-coder:3b-instruct";
+    };
+    # Reached over ACP: the opencode binary supplies its own credentials, so
+    # no key is needed and no local compute is spent.
+    ask = {
+      backend = "opencode";
       model = "openai/gpt-5.5";
-      kind = "acp";
     };
-    chat-local = {
-      auth = "ollama";
+    ask-local = {
+      backend = "ollama";
       endpoint = "ollama";
+      auth = "ollama";
       model = "gemma4:12b";
-      adapter = "ollama";
-      kind = "chat";
     };
     agent = {
-      cli = "claude";
+      command = "claude";
       model = "claude-sonnet-5";
-      kind = "cli";
     };
   };
 
   # Opt-in overlay chosen by NVIM_AI_TIER. Unset var = the defaults above.
   tiers.big = {
-    fim.model = "qwen2.5-coder:3b-base";
-    inline.model = "qwen2.5-coder:3b-instruct";
+    completion.model = "qwen2.5-coder:3b-base";
+    edit.model = "qwen2.5-coder:3b-instruct";
   };
 }
