@@ -10,7 +10,7 @@
   registry = import ./registry.nix;
   registryJson = builtins.toJSON registry;
 in {
-  imports = [./actions.nix];
+  imports = [./actions.nix ./progress.nix];
 
   extraConfigLuaPre = ''
     do
@@ -416,7 +416,12 @@ in {
           local r = ai.role(role)
           return r and (r.model or "?"):gsub("^.-/", "") or "?"
         end
-        return string.format("󰚩 %s  %s", short("completion"), short("ask"))
+        local spin = ""
+        local okp, progress = pcall(require, "ai.progress")
+        if okp then
+          spin = progress.status()
+        end
+        return string.format("%s󰚩 %s  %s", spin, short("completion"), short("ask"))
       end
     end
   '';
