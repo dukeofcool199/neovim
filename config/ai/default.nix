@@ -132,6 +132,7 @@ in {
           endpoint = true,
           auth = true,
           command = true,
+          requires = true,
         }
 
         local function tier_spec(role)
@@ -229,6 +230,16 @@ in {
           end
           overrides[layer][name] = vim.tbl_extend("force", overrides[layer][name] or {}, spec)
           M.emit(name)
+          if spec.model then
+            M.check(name, function(problems)
+              if #problems > 0 then
+                vim.notify(
+                  ("ai: %s cannot serve %s -- %s"):format(spec.model, name, table.concat(problems, ", ")),
+                  vim.log.levels.WARN
+                )
+              end
+            end)
+          end
           return M.role(name)
         end
 
@@ -329,6 +340,78 @@ in {
               end)
             end)
           end
+        end
+
+        --- Capabilities ollama reports for a model, cached per model.
+        --- Only ollama exposes this; other endpoints return nil, meaning
+        --- "unknown" rather than "unsupported".
+        local caps_cache = {}
+        function M.capabilities(name, cb)
+          local r = M.role(name)
+          if not (r and r.url and r.endpoint == "ollama" and r.model) then
+            return cb(nil)
+          end
+          if caps_cache[r.model] then
+            return cb(caps_cache[r.model])
+          end
+          vim.system({
+            "curl",
+            "-s",
+            "--max-time",
+            "10",
+            r.url .. "/api/show",
+            "-d",
+            vim.json.encode({model = r.model}),
+          }, {text = true}, function(obj)
+            vim.schedule(function()
+              local ok, parsed = pcall(vim.json.decode, obj.stdout or "")
+              local caps = ok and type(parsed) == "table" and parsed.capabilities or nil
+              if caps then
+                caps_cache[r.model] = caps
+              end
+              cb(caps)
+            end)
+          end)
+        end
+
+        --- Check a role's model against its declared `requires`.
+        --- Calls back with a list of problems; empty means it checks out.
+        function M.check(name, cb)
+          local r = M.role(name)
+          if not r then
+            return cb({"unknown role"})
+          end
+          local need = r.requires or {}
+          if #need == 0 then
+            return cb({})
+          end
+          M.capabilities(name, function(caps)
+            if not caps then
+              return cb({}, "not checkable")
+            end
+            local has = {}
+            for _, c in ipairs(caps) do
+              has[c] = true
+            end
+            -- A base model reports nothing beyond these two.
+            local instruct = false
+            for _, c in ipairs(caps) do
+              if c ~= "completion" and c ~= "insert" then
+                instruct = true
+              end
+            end
+            local problems = {}
+            for _, want in ipairs(need) do
+              if want == "instruct" then
+                if not instruct then
+                  table.insert(problems, "not instruction-following (base model)")
+                end
+              elseif not has[want] then
+                table.insert(problems, "lacks " .. want)
+              end
+            end
+            cb(problems, table.concat(caps, ","))
+          end)
         end
 
         --- Synchronous view of the model cache, for command completion
@@ -558,6 +641,38 @@ in {
       end,
       desc = "AI: credential status (! clears cache and probes pass)",
     })
+
+    vim.api.nvim_create_user_command("AiDoctor", function()
+      local ai = require("ai")
+      local auth = require("ai.auth")
+      local roles = ai.roles()
+      local rows, pending = {}, #roles
+      local resolved = {}
+      for _, a in ipairs(auth.status(false)) do
+        resolved[a.name] = a.resolved
+      end
+      for _, name in ipairs(roles) do
+        ai.check(name, function(problems, caps)
+          local r = ai.role(name)
+          local verdict
+          if #problems > 0 then
+            verdict = "FAIL  " .. table.concat(problems, ", ")
+          elseif r.auth and not resolved[r.auth] and r.endpoint ~= "ollama" then
+            verdict = "AUTH  no credential for " .. r.auth
+          elseif caps == "not checkable" or not caps then
+            verdict = "ok    (capabilities not reported)"
+          else
+            verdict = "ok    " .. caps
+          end
+          table.insert(rows, string.format("  %-18s %-26s %s", name, tostring(r.model), verdict))
+          pending = pending - 1
+          if pending == 0 then
+            table.sort(rows)
+            show(string.format("  %-18s %-26s %s", "ROLE", "MODEL", "VERDICT"), rows)
+          end
+        end)
+      end
+    end, {desc = "AI: check every role's model against what the role needs"})
 
     vim.api.nvim_create_user_command("AiTier", function(o)
       local t = require("ai").tier(o.fargs[1])

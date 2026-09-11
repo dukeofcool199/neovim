@@ -6,6 +6,11 @@
 # Role names match the verbs on the <leader>a keymaps, so what you press and
 # what you configure line up:
 #
+# `requires` lists what the model must be able to do, checked against
+# ollama's own /api/show capabilities by :AiDoctor. "insert" is a real ollama
+# capability (true fill-in-the-middle); "instruct" is derived -- a base model
+# reports nothing beyond completion/insert and will not follow an instruction.
+#
 #   ask         <leader>aa  talk about code in a chat buffer
 #   edit        <leader>ae  rewrite a selection or function in place
 #   agent       <leader>ad  hand a task to a CLI agent in a terminal
@@ -68,6 +73,7 @@
       endpoint = "ollama";
       auth = "ollama";
       model = "qwen2.5-coder:1.5b-base";
+      requires = ["insert"];
     };
     # Not fill-in-the-middle: a chat model asked to guess the middle, which is
     # why it can use a model without `insert`.
@@ -82,6 +88,7 @@
       endpoint = "ollama";
       auth = "ollama";
       model = "qwen2.5-coder:3b-instruct";
+      requires = ["instruct"];
     };
     next-edit-remote = {
       backend = "opencode-go";
@@ -89,11 +96,15 @@
       auth = "opencode-go";
       model = "glm-5.3-flash";
     };
+    # codecompanion applies inline edits itself with nvim_buf_set_text, so the
+    # model needs no tool-calling -- but it must follow instructions, which a
+    # base model will not.
     edit = {
       backend = "ollama";
       endpoint = "ollama";
       auth = "ollama";
       model = "qwen2.5-coder:3b-instruct";
+      requires = ["instruct"];
     };
     # Reached over ACP: the opencode binary supplies its own credentials, so
     # no key is needed and no local compute is spent.
@@ -101,11 +112,13 @@
       backend = "opencode";
       model = "openai/gpt-5.5";
     };
+    # Chat can drive codecompanion's tools, so this one really does need them.
     ask-local = {
       backend = "ollama_ask";
       endpoint = "ollama";
       auth = "ollama";
       model = "gemma4:12b";
+      requires = ["instruct" "tools"];
     };
     agent = {
       command = "claude";

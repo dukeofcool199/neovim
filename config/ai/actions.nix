@@ -160,6 +160,7 @@
       local SETTINGS = {
         {"Model...", "AiPick"},
         {"Status", "AiStatus"},
+        {"Doctor (check models suit their roles)", "AiDoctor"},
         {"Credentials", "AiAuth"},
         {"Credentials (re-check)", "AiAuth!"},
         {"Tier: small", "AiTier small"},
