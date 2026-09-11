@@ -51,13 +51,14 @@
       --- Begin indicating progress for request `id`.
       --- Anchors to the current buffer and cursor line unless that buffer is
       --- a chat, which draws its own.
-      function M.start(id, label)
+      function M.start(id, label, role)
         if jobs[id] then
           return
         end
         local buf = vim.api.nvim_get_current_buf()
         local inline = vim.bo[buf].filetype ~= "codecompanion"
         local job = {
+          role = role,
           buf = inline and buf or nil,
           line = inline and (vim.api.nvim_win_get_cursor(0)[1] - 1) or 0,
           label = label or "thinking",
@@ -89,6 +90,18 @@
         M.redraw()
       end
 
+      --- Mark a role busy without any virtual text. For high-frequency work
+      --- like per-keystroke completion, where a spinner in the buffer would
+      --- be noise.
+      function M.mark(id, role)
+        if jobs[id] then
+          return
+        end
+        jobs[id] = {role = role, started = vim.uv.now()}
+        n = n + 1
+        M.redraw()
+      end
+
       function M.stop(id)
         local job = jobs[id]
         if not job then
@@ -108,6 +121,21 @@
 
       function M.active()
         return n > 0
+      end
+
+      --- Is a particular role in flight right now?
+      function M.running(role)
+        for _, job in pairs(jobs) do
+          if job.role == role then
+            return true
+          end
+        end
+        return false
+      end
+
+      --- The animation frame, shared so every segment spins in step.
+      function M.frame()
+        return FRAMES[(math.floor(vim.uv.now() / INTERVAL) % #FRAMES) + 1]
       end
 
       --- Statusline fragment: a spinner while any request is in flight.
@@ -140,7 +168,11 @@
         callback = function(ev)
           local data = ev.data or {}
           local adapter = data.adapter or {}
-          require("ai.progress").start(data.id or "?", adapter.formatted_name or adapter.name or "thinking")
+          -- The payload says nothing about which interaction fired, so the
+          -- buffer decides: a chat buffer is `ask`, anything else is an
+          -- inline edit in your own code.
+          local role = vim.bo[vim.api.nvim_get_current_buf()].filetype == "codecompanion" and "ask" or "edit"
+          require("ai.progress").start(data.id or "?", adapter.formatted_name or adapter.name or "thinking", role)
         end,
       })
 
@@ -172,7 +204,7 @@
           local data = ev.data or {}
           duet_expected = data.n_requests or 1
           duet_done = 0
-          require("ai.progress").start(DUET, "next edit")
+          require("ai.progress").start(DUET, "next edit", "next-edit")
         end,
       })
 
@@ -183,6 +215,33 @@
           duet_done = duet_done + 1
           if duet_done >= duet_expected then
             require("ai.progress").stop(DUET)
+          end
+        end,
+      })
+
+      -- minuet completion, folded in from minuet's own lualine component.
+      -- No virtual text: this fires on every keystroke and would only
+      -- flicker. It marks the completion segment as busy and nothing more.
+      local comp_expected, comp_done = 0, 0
+      local COMP = "minuet-completion"
+
+      vim.api.nvim_create_autocmd("User", {
+        group = group,
+        pattern = "MinuetRequestStartedPre",
+        callback = function(ev)
+          comp_expected = (ev.data or {}).n_requests or 1
+          comp_done = 0
+          require("ai.progress").mark(COMP, "completion")
+        end,
+      })
+
+      vim.api.nvim_create_autocmd("User", {
+        group = group,
+        pattern = "MinuetRequestFinished",
+        callback = function()
+          comp_done = comp_done + 1
+          if comp_done >= comp_expected then
+            require("ai.progress").stop(COMP)
           end
         end,
       })

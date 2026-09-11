@@ -8,7 +8,8 @@
 {...}: let
   registry = import ../ai/registry.nix;
   role = n: registry.roles.${n};
-  url = n: registry.endpoints.${(role n).endpoint};
+  url = n: registry.endpoints.${(role n).endpoint}.url;
+  remote = registry.endpoints.opencode-go;
 in {
   plugins.codecompanion = {
     enable = true;
@@ -51,8 +52,8 @@ in {
             };
           };
 
-          # ask-local needs a different model on the same endpoint, so it gets
-          # its own adapter rather than fighting over `ollama`'s default.
+          # A second ollama adapter, so pointing `ask` at a local model does not
+          # fight with `edit` over one model default.
           ollama_ask.__raw = ''
             function()
               return require("codecompanion.adapters").extend("ollama", {
@@ -60,7 +61,7 @@ in {
                 formatted_name = "Ollama (chat)",
                 schema = {
                   model = {
-                    default = "${(role "ask-local").model}",
+                    default = "gemma4:12b",
                   },
                 },
               })
@@ -79,7 +80,7 @@ in {
                   api_key = function()
                     return require("ai.auth").get("opencode-go")
                   end,
-                  url = "${url "completion-remote"}",
+                  url = "${remote.url}",
                   chat_url = "/v1/chat/completions",
                   models_endpoint = "/v1/models",
                 },
@@ -92,7 +93,7 @@ in {
                 },
                 schema = {
                   model = {
-                    default = "${(role "completion-remote").model}",
+                    default = "glm-5.3-flash",
                   },
                 },
               })

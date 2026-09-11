@@ -7,14 +7,18 @@
 {...}: let
   registry = import ../ai/registry.nix;
   role = n: registry.roles.${n};
-  url = n: registry.endpoints.${(role n).endpoint};
-  key = n: {__raw = "function() return require('ai.auth').get('${(role n).auth}') end";};
+  ep = n: registry.endpoints.${(role n).endpoint};
+  url = n: (ep n).url;
+  key = n: {__raw = "function() return require('ai.auth').get('${(ep n).auth}') end";};
+  # The hosted endpoint is a template minuet can be switched onto; it is not a
+  # role of its own.
+  remote = registry.endpoints.opencode-go;
 
   opencodeGoDuet = {
     name = "OpenCode Go";
-    end_point = "${url "next-edit-remote"}/v1/chat/completions";
-    api_key = key "next-edit-remote";
-    model = "${(role "next-edit-remote").model}";
+    end_point = "${remote.url}/v1/chat/completions";
+    api_key.__raw = "function() return require('ai.auth').get('${remote.auth}') end";
+    model = "glm-5.3-flash";
     request_timeout = 20;
     transform = [
       {
@@ -89,9 +93,9 @@ in {
 
         openai_compatible = {
           name = "OpenCode Go";
-          end_point = "${url "completion-remote"}/v1/chat/completions";
-          api_key = key "completion-remote";
-          model = "${(role "completion-remote").model}";
+          end_point = "${remote.url}/v1/chat/completions";
+          api_key.__raw = "function() return require('ai.auth').get('${remote.auth}') end";
+          model = "glm-5.3-flash";
           stream = true;
           transform = [
             {
@@ -283,47 +287,6 @@ in {
       return M
     end
 
-    -- Statusline indicator: empty while AI completion is off, otherwise the
-    -- active model plus a spinner for in-flight requests.
-    do
-      local spinner = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
-      local in_flight, frame = 0, 1
-      local group = vim.api.nvim_create_augroup("MinuetStatus", { clear = true })
-
-      vim.api.nvim_create_autocmd("User", {
-        pattern = "MinuetRequestStarted",
-        group = group,
-        callback = function()
-          in_flight = in_flight + 1
-        end,
-      })
-
-      vim.api.nvim_create_autocmd("User", {
-        pattern = "MinuetRequestFinished",
-        group = group,
-        callback = function()
-          in_flight = math.max(0, in_flight - 1)
-        end,
-      })
-
-      function _G.minuet_lualine()
-        local ok, minuet = pcall(require, "minuet")
-        if not ok or not minuet.config or not minuet.config.cmp.enable_auto_complete then
-          return ""
-        end
-
-        local opts = minuet.config.provider_options[minuet.config.provider]
-        local label = "AI " .. (opts.model or "?")
-
-        if in_flight > 0 then
-          frame = frame % #spinner + 1
-          return label .. " " .. spinner[frame]
-        end
-
-        return label
-      end
-    end
-
     -- minuet-project: per-project minuet control, callable from .nvim.lua
     package.preload["minuet-project"] = function()
       local M = {}
@@ -484,32 +447,41 @@ in {
     -- Runs once per role at startup too, which is what applies NVIM_AI_TIER.
     do
       local ai = require("ai")
+      -- A role that moves between the local endpoint and the hosted one has to
+      -- change minuet's *provider*, not just its model: FIM completions go to
+      -- /v1/completions on openai_fim_compatible, hosted ones to
+      -- /v1/chat/completions on openai_compatible.
       local function apply(name, r)
-        -- Every role handled here is HTTP; a nil url means someone repointed
-        -- it at an ACP/CLI backend, which minuet cannot drive.
         if not (r and r.url) then
           return
         end
         local cfg = require("minuet").config
         if name == "completion" then
-          cfg.provider_options.openai_fim_compatible.model = r.model
-          cfg.provider_options.openai_fim_compatible.end_point = r.url .. "/v1/completions"
-        elseif name == "completion-remote" then
-          cfg.provider_options.openai_compatible.model = r.model
-          cfg.provider_options.openai_compatible.end_point = r.url .. "/v1/chat/completions"
+          local fim = r.endpoint == "ollama"
+          local slot = fim and "openai_fim_compatible" or "openai_compatible"
+          cfg.provider = slot
+          cfg.provider_options[slot].model = r.model
+          cfg.provider_options[slot].end_point = r.url .. (fim and "/v1/completions" or "/v1/chat/completions")
+          if r.api_key then
+            cfg.provider_options[slot].api_key = r.api_key
+          end
         elseif name == "next-edit" then
           local slot = cfg.duet.provider_options[cfg.duet.provider]
           if slot then
             slot.model = r.model
             slot.end_point = r.url .. "/v1/chat/completions"
+            if r.api_key then
+              slot.api_key = r.api_key
+            end
           end
         end
         pcall(function()
           require("lualine").refresh()
         end)
       end
+
       ai.on_change(apply)
-      for _, name in ipairs({"completion", "completion-remote", "next-edit"}) do
+      for _, name in ipairs({"completion", "next-edit"}) do
         apply(name, ai.role(name))
       end
     end

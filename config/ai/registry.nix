@@ -17,8 +17,6 @@
 #   completion  ghost text / cmp candidates as you type
 #   next-edit   predict the edit you are about to make, then apply it
 #
-# `-remote` variants are the same job against a hosted model instead of the
-# local one; `-local` variants are the reverse. Only one side is ever active.
 {
   # kind = "key"    -> env var first, `pass` consulted only on a miss
   # kind = "static" -> literal value (ollama ignores it, but the header must exist)
@@ -55,9 +53,18 @@
     width = 50;
   };
 
+  # Each endpoint owns its credential, so pointing a role at a different
+  # endpoint carries the right auth with it -- no per-role auth field to keep
+  # in sync.
   endpoints = {
-    ollama = "http://localhost:11434";
-    opencode-go = "https://opencode.ai/zen/go";
+    ollama = {
+      url = "http://localhost:11434";
+      auth = "ollama";
+    };
+    opencode-go = {
+      url = "https://opencode.ai/zen/go";
+      auth = "opencode-go";
+    };
   };
 
   # Defaults stay small and identical on both machines: the AMD box has no
@@ -67,42 +74,32 @@
   # `completion` and `next-edit` are restricted to the qwen2.5-coder models:
   # they are the only local ones advertising ollama's `insert` capability,
   # which is what real fill-in-the-middle needs.
+  # A role is a job, not a place. Point one at a local endpoint or a hosted
+  # one by setting its backend and model -- there is no separate "remote"
+  # role to switch to.
+  #
+  # `requires` is checked against ollama's /api/show by :AiDoctor. "insert" is
+  # a real ollama capability (true fill-in-the-middle); "instruct" is derived,
+  # since a base model reports nothing beyond completion/insert.
   roles = {
     completion = {
       backend = "ollama";
       endpoint = "ollama";
-      auth = "ollama";
       model = "qwen2.5-coder:1.5b-base";
       requires = ["insert"];
-    };
-    # Not fill-in-the-middle: a chat model asked to guess the middle, which is
-    # why it can use a model without `insert`.
-    completion-remote = {
-      backend = "opencode-go";
-      endpoint = "opencode-go";
-      auth = "opencode-go";
-      model = "glm-5.3-flash";
     };
     next-edit = {
       backend = "ollama";
       endpoint = "ollama";
-      auth = "ollama";
       model = "qwen2.5-coder:3b-instruct";
       requires = ["instruct"];
     };
-    next-edit-remote = {
-      backend = "opencode-go";
-      endpoint = "opencode-go";
-      auth = "opencode-go";
-      model = "glm-5.3-flash";
-    };
     # codecompanion applies inline edits itself with nvim_buf_set_text, so the
-    # model needs no tool-calling -- but it must follow instructions, which a
-    # base model will not.
+    # model needs no tool-calling -- it only has to follow instructions, which
+    # a base model will not.
     edit = {
       backend = "ollama";
       endpoint = "ollama";
-      auth = "ollama";
       model = "qwen2.5-coder:3b-instruct";
       requires = ["instruct"];
     };
@@ -111,14 +108,6 @@
     ask = {
       backend = "opencode";
       model = "openai/gpt-5.5";
-    };
-    # Chat can drive codecompanion's tools, so this one really does need them.
-    ask-local = {
-      backend = "ollama_ask";
-      endpoint = "ollama";
-      auth = "ollama";
-      model = "gemma4:12b";
-      requires = ["instruct" "tools"];
     };
     agent = {
       command = "claude";

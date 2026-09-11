@@ -1,4 +1,7 @@
-{...}: {
+{...}: let
+  registry = import ../ai/registry.nix;
+  aiRoles = ["completion" "next-edit" "edit" "ask" "agent"];
+in {
   plugins.lualine = {
     enable = true;
 
@@ -47,46 +50,31 @@
           "diagnostics"
           "lsp_progress"
         ];
-        lualine_x = [
-          {
-            __unkeyed-1.__raw = ''
-              function()
-                if _G.minuet_lualine then
-                  return _G.minuet_lualine()
+        lualine_x =
+          [
+            {
+              __unkeyed-1.__raw = ''
+                function()
+                  if _G.scripture_lualine then
+                    return _G.scripture_lualine()
+                  end
+                  return ""
                 end
-                return ""
-              end
-            '';
-            color = {fg = "#8ec07c";};
-          }
-          {
-            __unkeyed-1.__raw = ''
-              function()
-                if _G.scripture_lualine then
-                  return _G.scripture_lualine()
-                end
-                return ""
-              end
-            '';
-            color = {fg = "#d4a959";};
-          }
-          {
-            __unkeyed-1.__raw = ''
-              function()
-                if _G.ai_lualine then
-                  return _G.ai_lualine()
-                end
-                return ""
-              end
-            '';
-            color = {fg = "#d4a959";};
-            cond.__raw = ''
-              function()
-                return vim.o.columns > 80
-              end
-            '';
-          }
-        ];
+              '';
+              color = {fg = "#d4a959";};
+            }
+            # One component per AI role: tool, provider, model, and a spinner on
+            # whichever is running. Generated from the registry so a new role
+            # shows up here automatically.
+          ]
+          ++ (map (r: {
+              __unkeyed-1.__raw = "function() return _G.ai_lualine_role('${r}') end";
+              cond.__raw = "function() return _G.ai_lualine_show('${r}') end";
+              color.__raw = "function() return _G.ai_lualine_color('${r}') end";
+            })
+            aiRoles)
+          ++ [
+          ];
         lualine_y = ["filetype" "progress"];
         lualine_z = [
           {

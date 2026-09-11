@@ -176,13 +176,21 @@ in {
             r = vim.tbl_extend("force", r, layer)
           end
           r.name = name
-          r.url = r.endpoint and registry.endpoints[r.endpoint] or nil
+          local ep = r.endpoint and registry.endpoints[r.endpoint] or nil
+          r.url = ep and ep.url or nil
+          r.auth = ep and ep.auth or nil
           r.api_key = r.auth and auth.fn(r.auth) or nil
           r.source = M.source(name)
           return r
         end
 
         M.get = M.role
+
+        function M.endpoints()
+          local names = vim.tbl_keys(registry.endpoints)
+          table.sort(names)
+          return names
+        end
 
         function M.roles()
           local names = vim.tbl_keys(registry.roles)
@@ -288,7 +296,8 @@ in {
             table.insert(out, {
               role = name,
               model = r.model,
-              backend = r.backend or r.command or r.endpoint,
+              endpoint = r.endpoint or r.backend or r.command,
+              backend = r.backend or r.command or "-",
               auth = r.auth,
               source = r.source,
             })
@@ -489,22 +498,92 @@ in {
         return M
       end
 
-      --- Statusline: active completion and chat models, provider stripped.
-      _G.ai_lualine = function()
+      -- Statusline. One segment per role: what tool, which provider, which
+      -- model -- plus a spinner on whichever is working right now.
+      --
+      -- Segments are separate lualine components (see lualine.nix) so each
+      -- gets its own colour without embedding highlight escapes in a string.
+      local LABEL = {
+        completion = "cmp",
+        ["next-edit"] = "next",
+        edit = "edit",
+        ask = "ask",
+        agent = "agent",
+      }
+
+      --- Width each segment needs, so narrow windows drop the least useful
+      --- ones instead of wrapping.
+      local PRIORITY = {"edit", "ask", "completion", "next-edit", "agent"}
+
+      _G.ai_lualine_role = function(name)
         local ok, ai = pcall(require, "ai")
         if not ok then
           return ""
         end
-        local function short(role)
-          local r = ai.role(role)
-          return r and (r.model or "?"):gsub("^.-/", "") or "?"
+        local r = ai.role(name)
+        if not r then
+          return ""
         end
+        local provider = r.endpoint or r.backend or r.command or "?"
+        local model = (r.model or "?"):gsub("^.-/", "")
         local spin = ""
         local okp, progress = pcall(require, "ai.progress")
-        if okp then
-          spin = progress.status()
+        if okp and progress.running(name) then
+          spin = progress.frame() .. " "
         end
-        return string.format("%s󰚩 %s  %s", spin, short("completion"), short("ask"))
+        return string.format("%s%s %s/%s", spin, LABEL[name] or name, provider, model)
+      end
+
+      --- Which segments fit right now. Packed by real rendered width rather
+      --- than a per-segment guess, so a wide statusline cannot overflow into
+      --- the branch and location on the other side. A working role is always
+      --- included, even when nothing else fits.
+      local RESERVE = 60
+
+      local function fitting()
+        local budget = vim.o.columns - RESERVE
+        local chosen, used = {}, 0
+        local okp, progress = pcall(require, "ai.progress")
+        local function width(name)
+          return vim.fn.strdisplaywidth(_G.ai_lualine_role(name)) + 2
+        end
+        if okp then
+          for _, name in ipairs(PRIORITY) do
+            if progress.running(name) then
+              chosen[name] = true
+              used = used + width(name)
+            end
+          end
+        end
+        for _, name in ipairs(PRIORITY) do
+          if not chosen[name] then
+            local w = width(name)
+            if used + w <= budget then
+              chosen[name] = true
+              used = used + w
+            end
+          end
+        end
+        return chosen
+      end
+
+      _G.ai_lualine_show = function(name)
+        return fitting()[name] == true
+      end
+
+      --- Accent the working segment; dim completion when it is switched off.
+      _G.ai_lualine_color = function(name)
+        local okp, progress = pcall(require, "ai.progress")
+        if okp and progress.running(name) then
+          return {fg = "#fabd2f", gui = "bold"}
+        end
+        if name == "completion" then
+          local okm, minuet = pcall(require, "minuet")
+          if okm and minuet.config and minuet.config.cmp and not minuet.config.cmp.enable_auto_complete then
+            return {fg = "#665c54"}
+          end
+        end
+        return {fg = "#8ec07c"}
       end
     end
   '';
@@ -591,16 +670,20 @@ in {
         table.insert(
           lines,
           string.format(
-            "  %-18s %-28s %-14s %-12s %s",
+            "  %-12s %-26s %-12s %-12s %-11s %s",
             r.role,
             tostring(r.model),
+            tostring(r.endpoint),
             tostring(r.backend),
             tostring(r.auth or "-"),
             r.source
           )
         )
       end
-      show(string.format("  %-18s %-28s %-14s %-12s %s", "ROLE", "MODEL", "BACKEND", "AUTH", "SOURCE"), lines)
+      show(
+        string.format("  %-12s %-26s %-12s %-12s %-11s %s", "ROLE", "MODEL", "ENDPOINT", "BACKEND", "AUTH", "SOURCE"),
+        lines
+      )
     end, {desc = "AI: role/model status"})
 
     vim.api.nvim_create_user_command("AiAuth", function(o)
