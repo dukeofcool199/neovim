@@ -33,9 +33,9 @@ in {
         cli = {
           picker = "telescope",
           win = {
-            layout = "left",
+            layout = "${registry.ui.panel.position}",
             split = {
-              width = 50,
+              width = ${toString registry.ui.panel.width},
             },
           },
           tools = {

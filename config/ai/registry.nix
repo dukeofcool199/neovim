@@ -43,6 +43,13 @@
     claude-cli = {kind = "none";};
   };
 
+  # Geometry shared by every AI side panel, so the chat buffer and the agent
+  # terminal open the same shape instead of drifting apart.
+  ui.panel = {
+    position = "left";
+    width = 50;
+  };
+
   endpoints = {
     ollama = "http://localhost:11434";
     opencode-go = "https://opencode.ai/zen/go";
@@ -95,7 +102,7 @@
       model = "openai/gpt-5.5";
     };
     ask-local = {
-      backend = "ollama";
+      backend = "ollama_ask";
       endpoint = "ollama";
       auth = "ollama";
       model = "gemma4:12b";

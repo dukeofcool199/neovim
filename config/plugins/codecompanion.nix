@@ -17,6 +17,15 @@ in {
       display = {
         chat = {
           show_settings = false;
+          # Same shape as the sidekick terminal: a fixed-width full-height
+          # panel, not half the editor. width >= 1 is read as absolute
+          # columns; the upstream default of 0.5 is a fraction.
+          window = {
+            layout = "vertical";
+            position = registry.ui.panel.position;
+            width = registry.ui.panel.width;
+            full_height = true;
+          };
         };
       };
       opts = {
@@ -34,8 +43,29 @@ in {
           extend = {
             anthropic.env.api_key.__raw = "function() return require('ai.auth').get('anthropic') end";
             openrouter.env.api_key.__raw = "function() return require('ai.auth').get('openrouter') end";
-            ollama.env.url.__raw = "function() return '${url "edit"}' end";
+            ollama = {
+              env.url.__raw = "function() return '${url "edit"}' end";
+              # Without this the adapter picks whatever ollama lists first and
+              # the edit role's model is ignored.
+              schema.model.default = "${(role "edit").model}";
+            };
           };
+
+          # ask-local needs a different model on the same endpoint, so it gets
+          # its own adapter rather than fighting over `ollama`'s default.
+          ollama_ask.__raw = ''
+            function()
+              return require("codecompanion.adapters").extend("ollama", {
+                name = "ollama_ask",
+                formatted_name = "Ollama (chat)",
+                schema = {
+                  model = {
+                    default = "${(role "ask-local").model}",
+                  },
+                },
+              })
+            end
+          '';
 
           # OpenCode Go over the openai_compatible shim. schema.model.default
           # must be a literal: the built-in default does a synchronous
@@ -105,25 +135,63 @@ in {
           if r.backend then
             cc.interactions.inline.adapter = r.backend
           end
-          if r.model and cc.adapters.http.extend and cc.adapters.http.extend[r.backend] then
-            cc.adapters.http.extend[r.backend].schema =
-              vim.tbl_deep_extend("force", cc.adapters.http.extend[r.backend].schema or {}, {
-                model = {default = r.model},
-              })
+          if r.backend and r.model then
+            -- Created on demand: a backend the registry did not ship with an
+            -- extend entry (opencode_go, say) would otherwise drop the model.
+            cc.adapters.http.extend = cc.adapters.http.extend or {}
+            local entry = cc.adapters.http.extend[r.backend] or {}
+            entry.schema = vim.tbl_deep_extend("force", entry.schema or {}, {
+              model = {default = r.model},
+            })
+            cc.adapters.http.extend[r.backend] = entry
           end
         elseif name == "ask" then
           if r.backend then
             cc.interactions.chat.adapter = r.backend
             cc.interactions.agent.adapter = r.backend
           end
-          -- Retarget any chat buffer that is already open.
+          -- Retarget chat buffers that are already open.
+          --
+          -- Only within one transport: moving a live chat between an ACP
+          -- adapter and an HTTP one tears down an in-flight ACP connection
+          -- and throws from a scheduled callback (acp/init.lua indexing a nil
+          -- `defaults`), which no pcall here can catch because it fires after
+          -- this returns. Cross-transport changes therefore apply to the next
+          -- chat, and say so.
           local ok, chat_mod = pcall(require, "codecompanion.interactions.chat")
-          if ok and chat_mod.buf_get_chat and r.model then
+          if ok and chat_mod.buf_get_chat then
+            local target
+            if r.backend then
+              local resolved, ad = pcall(require("codecompanion.adapters").resolve, r.backend)
+              target = resolved and ad or nil
+            end
             for _, entry in ipairs(chat_mod.buf_get_chat() or {}) do
               local chat = entry.chat or entry
-              pcall(function()
-                chat:change_model({model = r.model})
-              end)
+              if chat and chat.adapter then
+                local swapping = target and chat.adapter.name ~= target.name
+                if swapping and target.type ~= chat.adapter.type then
+                  vim.notify(
+                    ("ai: %s is %s, this chat is %s -- applies to the next chat"):format(
+                      r.backend,
+                      target.type,
+                      chat.adapter.type
+                    ),
+                    vim.log.levels.INFO
+                  )
+                else
+                  if swapping then
+                    -- Refused once a chat holds tool calls or reasoning.
+                    pcall(function()
+                      chat:change_adapter(r.backend)
+                    end)
+                  end
+                  if r.model then
+                    pcall(function()
+                      chat:change_model({model = r.model})
+                    end)
+                  end
+                end
+              end
             end
           end
         end
