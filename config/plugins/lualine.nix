@@ -73,8 +73,8 @@
           {
             __unkeyed-1.__raw = ''
               function()
-                if _G.ninetynine_lualine_model then
-                  return _G.ninetynine_lualine_model()
+                if _G.ai_lualine then
+                  return _G.ai_lualine()
                 end
                 return ""
               end

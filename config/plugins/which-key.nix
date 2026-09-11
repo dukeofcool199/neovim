@@ -7,7 +7,7 @@
         # Top-level leader groups
         {
           __unkeyed-1 = "<leader>a";
-          group = "AI (Sidekick)";
+          group = "AI";
         }
         {
           __unkeyed-1 = "<leader>b";
@@ -16,10 +16,6 @@
         {
           __unkeyed-1 = "<leader>B";
           group = "Bookmarks";
-        }
-        {
-          __unkeyed-1 = "<leader>c";
-          group = "Code";
         }
         {
           __unkeyed-1 = "<leader>f";
@@ -32,10 +28,6 @@
         {
           __unkeyed-1 = "<leader>h";
           group = "Haskell";
-        }
-        {
-          __unkeyed-1 = "<leader>i";
-          group = "Inline AI (Minuet)";
         }
         {
           __unkeyed-1 = "<leader>j";
@@ -80,10 +72,6 @@
         {
           __unkeyed-1 = "<leader>w";
           group = "Workspace";
-        }
-        {
-          __unkeyed-1 = "<leader>y";
-          group = "AI Yank";
         }
         {
           __unkeyed-1 = "<leader>z";

@@ -5,11 +5,16 @@
 # default. Projects override the model from a .nvim.lua via the
 # `minuet-project` Lua module defined below.
 {...}: let
+  registry = import ../ai/registry.nix;
+  role = n: registry.roles.${n};
+  url = n: registry.endpoints.${(role n).endpoint};
+  key = n: {__raw = "function() return require('ai.auth').get('${(role n).auth}') end";};
+
   opencodeGoDuet = {
     name = "OpenCode Go";
-    end_point = "https://opencode.ai/zen/go/v1/chat/completions";
-    api_key = "OPENCODE_API_KEY";
-    model = "glm-5.3-flash";
+    end_point = "${url "duet-remote"}/v1/chat/completions";
+    api_key = key "duet-remote";
+    model = "${(role "duet-remote").model}";
     request_timeout = 20;
     transform = [
       {
@@ -25,9 +30,9 @@
 
   ollamaDuet = {
     name = "Ollama";
-    end_point = "http://localhost:11434/v1/chat/completions";
-    api_key.__raw = "function() return 'ollama' end";
-    model = "qwen2.5-coder:3b-instruct";
+    end_point = "${url "duet"}/v1/chat/completions";
+    api_key = key "duet";
+    model = "${(role "duet").model}";
     request_timeout = 180;
     transform = [];
   };
@@ -51,9 +56,9 @@ in {
       provider_options = {
         openai_fim_compatible = {
           name = "Ollama";
-          end_point = "http://localhost:11434/v1/completions";
-          api_key.__raw = "function() return 'ollama' end";
-          model = "qwen2.5-coder:3b-base";
+          end_point = "${url "fim"}/v1/completions";
+          api_key = key "fim";
+          model = "${(role "fim").model}";
           stream = true;
           optional = {
             max_tokens = 56;
@@ -84,9 +89,9 @@ in {
 
         openai_compatible = {
           name = "OpenCode Go";
-          end_point = "https://opencode.ai/zen/go/v1/chat/completions";
-          api_key = "OPENCODE_API_KEY";
-          model = "glm-5.3-flash";
+          end_point = "${url "fim-remote"}/v1/chat/completions";
+          api_key = key "fim-remote";
+          model = "${(role "fim-remote").model}";
           stream = true;
           transform = [
             {
@@ -104,13 +109,13 @@ in {
       presets = {
         fast = {
           provider = "openai_fim_compatible";
-          provider_options.openai_fim_compatible.model = "qwen2.5-coder:1.5b-base";
+          provider_options.openai_fim_compatible.model = "${(role "fim").model}";
           context_window = 1024;
           request_timeout = 10;
         };
         big = {
           provider = "openai_fim_compatible";
-          provider_options.openai_fim_compatible.model = "qwen2.5-coder:3b-base";
+          provider_options.openai_fim_compatible.model = "${registry.tiers.big.fim.model}";
           context_window = 4096;
           request_timeout = 20;
         };
@@ -128,13 +133,15 @@ in {
       lsp.inline_completion.enable = false;
 
       # Duet (next-edit prediction) rewrites a whole region. Only
-      # `openai_compatible` is wired up; `go` and `ollama` are inert templates
-      # that minuet-project swaps into that slot at runtime.
+      # `openai_compatible` is a real backend slot; `go` and `ollama` are inert
+      # templates that minuet-project swaps into it at runtime. The slot holds
+      # the local backend by default -- the remote one needs a credential that
+      # may not be present.
       duet = {
         provider = "openai_compatible";
         request_timeout = 20;
         provider_options = {
-          openai_compatible = opencodeGoDuet;
+          openai_compatible = ollamaDuet;
           go = opencodeGoDuet;
           ollama = ollamaDuet;
         };
@@ -330,9 +337,11 @@ in {
         require("minuet").change_preset(name)
       end
 
-      --- Set the Ollama model used for FIM completion.
+      --- Set the Ollama model used for FIM completion. Routed through the
+      --- registry so :AiStatus stays truthful; the listener below writes it
+      --- into minuet's live config.
       function M.model(name)
-        config().provider_options.openai_fim_compatible.model = name
+        require("ai").set("fim", name)
       end
 
       --- Route completions through the remote OpenCode Go endpoint.
@@ -415,7 +424,7 @@ in {
 
       --- Set the model duet's current provider uses.
       function M.duet_model(name)
-        config().duet.provider_options[config().duet.provider].model = name
+        require("ai").set("duet", name)
       end
 
       M.duet_backends = { "go", "ollama" }
@@ -469,67 +478,40 @@ in {
 
       return M
     end
-  '';
 
-  keymaps = let
-    project = action: {
-      __raw = ''
-        function()
-          require("minuet-project").${action}
+    -- Registry -> minuet. minuet re-reads its config table on every request,
+    -- so writing here takes effect on the next completion with no restart.
+    -- Runs once per role at startup too, which is what applies NVIM_AI_TIER.
+    do
+      local ai = require("ai")
+      local function apply(name, r)
+        -- Every role handled here is HTTP; a nil url means someone repointed
+        -- it at an ACP/CLI backend, which minuet cannot drive.
+        if not (r and r.url) then
+          return
         end
-      '';
-    };
-    duet = action: {
-      __raw = ''
-        function()
-          require("minuet.duet").action.${action}()
+        local cfg = require("minuet").config
+        if name == "fim" then
+          cfg.provider_options.openai_fim_compatible.model = r.model
+          cfg.provider_options.openai_fim_compatible.end_point = r.url .. "/v1/completions"
+        elseif name == "fim-remote" then
+          cfg.provider_options.openai_compatible.model = r.model
+          cfg.provider_options.openai_compatible.end_point = r.url .. "/v1/chat/completions"
+        elseif name == "duet" then
+          local slot = cfg.duet.provider_options[cfg.duet.provider]
+          if slot then
+            slot.model = r.model
+            slot.end_point = r.url .. "/v1/chat/completions"
+          end
         end
-      '';
-    };
-  in [
-    {
-      mode = "n";
-      key = "<leader>ii";
-      action = project "toggle()";
-      options = {desc = "Minuet: toggle AI completions";};
-    }
-    {
-      mode = "n";
-      key = "<leader>im";
-      action.__raw = ''
-        function()
-          require("minuet-models").choose("completion")
-        end
-      '';
-      options = {desc = "Minuet: completion backend + model";};
-    }
-    {
-      mode = "n";
-      key = "<leader>iM";
-      action.__raw = ''
-        function()
-          require("minuet-models").choose("duet")
-        end
-      '';
-      options = {desc = "Duet: backend + model";};
-    }
-    {
-      mode = "n";
-      key = "<leader>i?";
-      action = project "status()";
-      options = {desc = "Minuet: status";};
-    }
-    {
-      mode = "n";
-      key = "<leader>id";
-      action = duet "predict";
-      options = {desc = "Duet: predict next edit";};
-    }
-    {
-      mode = "n";
-      key = "<leader>ia";
-      action = duet "apply";
-      options = {desc = "Duet: apply prediction";};
-    }
-  ];
+        pcall(function()
+          require("lualine").refresh()
+        end)
+      end
+      ai.on_change(apply)
+      for _, name in ipairs({"fim", "fim-remote", "duet"}) do
+        apply(name, ai.role(name))
+      end
+    end
+  '';
 }

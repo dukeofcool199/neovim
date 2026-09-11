@@ -1,5 +1,6 @@
 {pkgs, ...}: let
-  claudeModel = "claude-sonnet-5";
+  registry = import ../ai/registry.nix;
+  claudeModel = registry.roles.agent.model;
 
   sidekick-nvim = pkgs.vimUtils.buildVimPlugin {
     name = "sidekick.nvim";
@@ -15,6 +16,14 @@ in {
   extraPlugins = [sidekick-nvim];
 
   extraConfigLua = ''
+    -- Seed the environment before any terminal spawns: sidekick snapshots
+    -- vim.uv.os_environ() at jobstart, and its env table must hold plain
+    -- strings (a function raises E729, and the zellij backend ignores tool
+    -- env entirely), so eager export is the only shape that works here.
+    pcall(function()
+      require("ai.auth").export("opencode-go")
+    end)
+
     local sidekick_ok, sidekick = pcall(require, "sidekick")
     if sidekick_ok then
       sidekick.setup({
@@ -47,163 +56,22 @@ in {
           },
         },
       })
+
+      -- Registry -> sidekick. Late-bound per spawn, so this reaches the
+      -- next terminal; a running CLI keeps the argv and env it started
+      -- with. require("sidekick.config").setup() must not be re-called:
+      -- it rebuilds from defaults and would discard this.
+      require("ai").on_change(function(name, r)
+        if name ~= "agent" or not r then
+          return
+        end
+        local cfg = require("sidekick.config")
+        local bin = r.cli or "claude"
+        local tool = cfg.cli and cfg.cli.tools and cfg.cli.tools[bin]
+        if tool and r.model then
+          tool.cmd = {bin, "--model", r.model}
+        end
+      end)
     end
   '';
-
-  keymaps = [
-    {
-      mode = ["n" "v"];
-      key = "<leader>aa";
-      action.__raw = ''
-        function()
-          require("sidekick.cli").toggle()
-        end
-      '';
-      options = {
-        desc = "Sidekick: toggle CLI";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>ac";
-      action.__raw = ''
-        function()
-          require("sidekick.cli").toggle({ name = "claude", focus = true })
-        end
-      '';
-      options = {
-        desc = "Sidekick: toggle Claude Code";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>ai";
-      action.__raw = ''
-        function()
-          require("sidekick.cli").toggle({ name = "aider", focus = true })
-        end
-      '';
-      options = {
-        desc = "Sidekick: toggle Aider";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>ao";
-      action.__raw = ''
-        function()
-          require("sidekick.cli").toggle({ name = "opencode", focus = true })
-        end
-      '';
-      options = {
-        desc = "Sidekick: toggle opencode";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>aP";
-      action.__raw = ''
-        function()
-          require("sidekick.cli").toggle({ name = "pi", focus = true })
-        end
-      '';
-      options = {
-        desc = "Sidekick: toggle pi";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>as";
-      action.__raw = ''
-        function()
-          require("sidekick.cli").select()
-        end
-      '';
-      options = {
-        desc = "Sidekick: select CLI tool";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>ad";
-      action.__raw = ''
-        function()
-          require("sidekick.cli").close()
-        end
-      '';
-      options = {
-        desc = "Sidekick: detach CLI session";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = ["n" "v"];
-      key = "<leader>ap";
-      action.__raw = ''
-        function()
-          require("sidekick.cli").prompt()
-        end
-      '';
-      options = {
-        desc = "Sidekick: select prompt";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = ["n" "v"];
-      key = "<leader>at";
-      action.__raw = ''
-        function()
-          require("sidekick.cli").send({ msg = "{this}" })
-        end
-      '';
-      options = {
-        desc = "Sidekick: send this";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "v";
-      key = "<leader>av";
-      action.__raw = ''
-        function()
-          require("sidekick.cli").send({ msg = "{selection}" })
-        end
-      '';
-      options = {
-        desc = "Sidekick: send selection";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>af";
-      action.__raw = ''
-        function()
-          require("sidekick.cli").send({ msg = "{file}" })
-        end
-      '';
-      options = {
-        desc = "Sidekick: send file";
-        silent = true;
-        noremap = true;
-      };
-    }
-  ];
 }

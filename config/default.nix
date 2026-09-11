@@ -1,5 +1,5 @@
 {pkgs, ...}: {
-  imports = [./options.nix ./keymaps.nix ./plugins ./lsp];
+  imports = [./options.nix ./keymaps.nix ./plugins ./lsp ./ai];
 
   # Package configuration
   viAlias = true;

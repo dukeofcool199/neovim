@@ -37,6 +37,5 @@
     ./prompt-yank.nix
     ./better-escape.nix
     ./minuet.nix
-    ./99.nix
   ];
 }
