@@ -1,8 +1,12 @@
 # Intent-named AI bindings. Every map here says what you want done, never
-# which plugin does it: Ask and Edit reach codecompanion, Do and Send reach
-# sidekick's agent terminals, Completion and Next reach minuet, Yank reaches
-# prompt-yank. Lowercase acts with the registry's current model; the
+# which plugin does it: Ask, Edit and Task reach codecompanion, Do and Send
+# reach sidekick's agent terminals, Completion and Next reach minuet, Yank
+# reaches prompt-yank. Lowercase acts with the registry's current model; the
 # capitalised sibling chooses first.
+#
+# Edit is freeform -- you type the instruction. Task is the opposite: a named
+# prompt from config/ai/prompts, written once so a small local model gets the
+# same brief every time.
 {...}: {
   extraConfigLua = ''
     package.preload["ai.actions"] = function()
@@ -38,7 +42,16 @@
       }
 
       --- Line range of the innermost function-ish node under the cursor.
+      ---
+      --- get_node reads the last parsed tree and answers nil when there isn't
+      --- one yet, which is how a freshly opened buffer behaves, so parse first.
       local function enclosing_function()
+        pcall(function()
+          local parser = vim.treesitter.get_parser(0)
+          if parser then
+            parser:parse()
+          end
+        end)
         local ok, node = pcall(vim.treesitter.get_node)
         if not ok or not node then
           return nil
@@ -53,19 +66,133 @@
         return nil
       end
 
-      --- Inline edit over the enclosing function, falling back to the buffer.
-      function M.edit()
+      --- Put '< and '> around the region an AI action should act on: the live
+      --- visual selection, or the enclosing function when there is none.
+      ---
+      --- The marks are the load-bearing part, not the `:range`. codecompanion
+      --- treats any range as "visual" but then reads the marks rather than the
+      --- range itself, so a command built from line numbers alone sends
+      --- whatever happened to be selected last.
+      local function mark_region()
+        if vim.fn.mode():match("^[vV\22]") then
+          vim.cmd("normal! \27")
+          return
+        end
         local first, last = enclosing_function()
         if not first then
           vim.notify("ai: no enclosing function, using whole buffer", vim.log.levels.WARN)
           first, last = 1, vim.api.nvim_buf_line_count(0)
         end
-        vim.api.nvim_feedkeys((":%d,%dCodeCompanion "):format(first, last), "n", false)
+        local tail = vim.api.nvim_buf_get_lines(0, last - 1, last, false)[1] or ""
+        vim.fn.setpos("'<", {0, first, 1, 0})
+        vim.fn.setpos("'>", {0, last, math.max(1, #tail), 0})
+      end
+
+      --- Inline edit over the enclosing function, falling back to the buffer.
+      function M.edit()
+        mark_region()
+        vim.api.nvim_feedkeys(":'<,'>CodeCompanion ", "n", false)
       end
 
       function M.edit_pick()
         require("ai").pick("edit", function()
           M.edit()
+        end)
+      end
+
+      -- Task --------------------------------------------------------------
+      -- Named prompts from codecompanion's library: the ones that rewrite a
+      -- selection run on the `edit` model, the ones that open a chat run on
+      -- `ask`. Drop a markdown file into .codecompanion/prompts and it joins
+      -- the list.
+
+      local function run_task(alias)
+        require("codecompanion").prompt(alias, {range = 2})
+      end
+
+      -- Builtins that config/ai/prompts covers better, hidden so the list holds
+      -- one entry per intent.
+      local SUPERSEDED = {tests = true}
+
+      local function tasks()
+        local palette = require("codecompanion.action_palette")
+        local context = require("codecompanion.utils.context").get(0)
+        local found = {}
+        for _, item in ipairs(palette.get_cached_items(context)) do
+          local alias = item.opts and item.opts.alias
+          if alias and not SUPERSEDED[alias] and (item.interaction == "inline" or item.interaction == "chat") then
+            table.insert(found, item)
+          end
+        end
+        table.sort(found, function(a, b)
+          if a.interaction ~= b.interaction then
+            return a.interaction == "inline"
+          end
+          return a.name < b.name
+        end)
+        return found
+      end
+
+      local PLACEMENT = {
+        new = "new buffer",
+        before = "above selection",
+        add = "below selection",
+      }
+
+      --- Where a task's output lands, and which role pays for it.
+      local function destination(item)
+        if item.interaction ~= "inline" then
+          return "chat", "ask"
+        end
+        return PLACEMENT[item.opts.placement] or "replace selection", "edit"
+      end
+
+      function M.task(alias)
+        mark_region()
+        run_task(alias)
+      end
+
+      local function task_menu()
+        local found = tasks()
+        if #found == 0 then
+          vim.notify("ai: no tasks in the prompt library", vim.log.levels.WARN)
+          return
+        end
+
+        local ai = require("ai")
+        local name_w, where_w = 0, 0
+        local rows = {}
+        for _, item in ipairs(found) do
+          local where, role = destination(item)
+          name_w = math.max(name_w, vim.fn.strdisplaywidth(item.name))
+          where_w = math.max(where_w, vim.fn.strdisplaywidth(where))
+          table.insert(rows, {item.name, where, ai.describe(role)})
+        end
+        local fmt = ("%%-%ds   %%-%ds   %%s"):format(name_w, where_w)
+        local labels = vim.tbl_map(function(row)
+          return fmt:format(row[1], row[2], row[3])
+        end, rows)
+
+        vim.ui.select(labels, {prompt = "AI: task"}, function(_, idx)
+          if idx then
+            run_task(found[idx].opts.alias)
+          end
+        end)
+      end
+
+      --- Both entry points mark the region first: vim.ui.select drops visual
+      --- mode, so by the time a menu answers there is nothing left to read.
+      function M.task_pick()
+        mark_region()
+        task_menu()
+      end
+
+      --- For the tasks a small model cannot hold: raise the edit model, then
+      --- choose. The choice sticks for the session, the same as <leader>aE.
+      function M.task_pick_model()
+        mark_region()
+        require("ai").pick("edit", function()
+          task_menu()
         end)
       end
 
@@ -231,6 +358,26 @@
       action = act "edit_pick()";
       options = {
         desc = "Edit (choose model)";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = ["n" "v"];
+      key = "<leader>at";
+      action = act "task_pick()";
+      options = {
+        desc = "Task (document, fix, tests, review...)";
+        silent = true;
+        noremap = true;
+      };
+    }
+    {
+      mode = ["n" "v"];
+      key = "<leader>aT";
+      action = act "task_pick_model()";
+      options = {
+        desc = "Task (choose model)";
         silent = true;
         noremap = true;
       };

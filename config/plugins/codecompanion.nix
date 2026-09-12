@@ -49,6 +49,29 @@ in {
               # Without this the adapter picks whatever ollama lists first and
               # the edit role's model is ignored.
               schema.model.default = "${(role "edit").model}";
+              # Both of these are nil in the adapter, so ollama's own defaults
+              # apply: temperature 0.8 and a 4k window. An inline edit has to
+              # reproduce the input verbatim and then emit it as JSON, and at
+              # 0.8 a small model drifts -- it renames the function, or answers
+              # with the docstring alone and drops the body. 8k leaves room for
+              # a task prompt plus a long selection.
+              schema.temperature.default = 0;
+              schema.num_ctx.default = 8192;
+              # An inline reply has to be a JSON object, and a small model
+              # stops producing one as soon as the input grows: past about
+              # three lines qwen2.5-coder:3b answers in a markdown fence
+              # instead and codecompanion discards the whole reply. ollama's
+              # `format` constrains decoding, so the envelope holds whatever
+              # the model would have done.
+              #
+              # This reaches only the inline adapter: apply_extend keys off the
+              # name a caller resolved by, so `ollama_ask` gets extend.ollama_ask
+              # and keeps its free-text replies.
+              schema.format = {
+                mapping = "parameters";
+                type = "string";
+                default = "json";
+              };
             };
           };
 
@@ -101,6 +124,15 @@ in {
           '';
         };
       };
+
+      # Named tasks, one markdown file each, reached through <leader>at.
+      # A file dropped into any of these directories shows up in the picker with
+      # no rebuild; the first is baked into the store, the rest are yours.
+      prompt_library.markdown.dirs = [
+        "${../ai/prompts}"
+        "~/.config/codecompanion/prompts"
+        ".codecompanion/prompts"
+      ];
 
       interactions = {
         # opencode is an ACP adapter: it spawns `opencode acp` and authenticates
