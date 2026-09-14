@@ -50,7 +50,6 @@
       sources = [
         {name = "nvim_lsp";}
         {name = "luasnip";}
-        {name = "minuet";}
       ];
     };
   };

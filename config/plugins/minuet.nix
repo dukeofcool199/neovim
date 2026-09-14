@@ -154,23 +154,10 @@ in {
   };
 
   extraConfigLua = ''
-    -- minuet-opencode: headers OpenCode Go requires of third-party clients.
-    -- Requests without x-opencode-session are rejected with a 400
-    -- MissingSessionID. See https://opencode.ai/docs/go/#where-can-i-use-it
+    -- The OpenCode Go session header lives in config/ai (ai.opencode) so
+    -- avante and codecompanion share it; this name is kept for the callers here.
     package.preload["minuet-opencode"] = function()
-      local M = {}
-
-      local session = ("nvim-%d-%d"):format(vim.fn.getpid(), os.time())
-
-      --- Headers for one request kind; the session id is stable per Neovim process.
-      function M.headers(kind)
-        return {
-          ["x-opencode-session"] = session .. "-" .. (kind or "main"),
-          ["User-Agent"] = "minuet.nvim-nixvim/1.0",
-        }
-      end
-
-      return M
+      return require("ai.opencode")
     end
 
     -- minuet-models: live model picker. Both backends expose an

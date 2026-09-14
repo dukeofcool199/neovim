@@ -1,6 +1,6 @@
 {...}: let
   registry = import ../ai/registry.nix;
-  aiRoles = ["completion" "next-edit" "edit" "ask" "agent"];
+  aiRoles = ["edit" "agent" "cli"];
 in {
   plugins.lualine = {
     enable = true;

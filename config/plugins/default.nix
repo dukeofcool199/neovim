@@ -26,7 +26,7 @@
     ./extra-plugins.nix
     ./jj.nix
     ./octo.nix
-    ./codecompanion.nix
+    ./avante.nix
     ./sidekick.nix
     ./dressing.nix
     ./render-markdown.nix
@@ -36,6 +36,5 @@
     ./scripture.nix
     ./prompt-yank.nix
     ./better-escape.nix
-    ./minuet.nix
   ];
 }

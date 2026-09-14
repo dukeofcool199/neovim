@@ -1,7 +1,8 @@
 # Bakes config/ai/registry.nix into two requireable Lua modules:
 #
-#   ai.auth - credential resolution (env var first, `pass` on a miss, cached)
-#   ai      - role -> model bindings, runtime overrides, change propagation
+#   ai.auth     - credential resolution (env var first, `pass` on a miss, cached)
+#   ai.opencode - the per-process session header OpenCode Go insists on
+#   ai          - role -> model bindings, runtime overrides, change propagation
 #
 # Emitted into extraConfigLuaPre because nixvim assembles
 # Pre -> Vim -> Lua -> Post and plugin setup() calls land in the Lua region;
@@ -118,6 +119,23 @@ in {
         return M
       end
 
+      -- Requests to OpenCode Go without x-opencode-session are rejected with
+      -- 400 MissingSessionID. https://opencode.ai/docs/go/#where-can-i-use-it
+      package.preload["ai.opencode"] = function()
+        local M = {}
+        local session = ("nvim-%d-%d"):format(vim.fn.getpid(), os.time())
+
+        --- Headers for one request kind; the session id is stable per Neovim process.
+        function M.headers(kind)
+          return {
+            ["x-opencode-session"] = session .. "-" .. (kind or "main"),
+            ["User-Agent"] = "nixvim-ai/1.0",
+          }
+        end
+
+        return M
+      end
+
       package.preload["ai"] = function()
         local M = {}
         local auth = require("ai.auth")
@@ -175,6 +193,17 @@ in {
           for _, layer in ipairs(layers) do
             r = vim.tbl_extend("force", r, layer)
           end
+          -- The backend decides the endpoint: an agent brings its own (or
+          -- none, over ACP), and a backend named like an endpoint is that
+          -- endpoint. Only a backend the registry does not know keeps an
+          -- endpoint set separately.
+          local agent = r.backend and registry.agents and registry.agents[r.backend] or nil
+          if agent then
+            r.transport = agent.transport
+            r.endpoint = agent.endpoint
+          elseif r.backend and registry.endpoints[r.backend] then
+            r.endpoint = r.backend
+          end
           r.name = name
           local ep = r.endpoint and registry.endpoints[r.endpoint] or nil
           r.url = ep and ep.url or nil
@@ -192,6 +221,7 @@ in {
           edit = "edit",
           ask = "ask",
           agent = "agent",
+          cli = "cli",
         }
 
         --- Short name for a role, as shown in the statusline and the ghost
@@ -206,6 +236,9 @@ in {
           if not r then
             return name
           end
+          if not (r.model or r.backend or r.command) then
+            return M.label(name) .. " unset"
+          end
           local provider = r.endpoint or r.backend or r.command or "?"
           local model = (r.model or "?"):gsub("^.-/", "")
           return string.format("%s %s/%s", M.label(name), provider, model)
@@ -219,6 +252,20 @@ in {
 
         function M.roles()
           local names = vim.tbl_keys(registry.roles)
+          table.sort(names)
+          return names
+        end
+
+        --- Backends the agent role accepts.
+        function M.backends()
+          local names = vim.tbl_keys(registry.agents or {})
+          table.sort(names)
+          return names
+        end
+
+        --- HTTP endpoints, which is what a plain completion role (edit) can use.
+        function M.http_backends()
+          local names = vim.tbl_keys(registry.endpoints)
           table.sort(names)
           return names
         end
@@ -260,6 +307,13 @@ in {
             if not FIELDS[k] then
               vim.notify("ai.set: unknown field '" .. tostring(k) .. "'", vim.log.levels.WARN)
             end
+          end
+          if name == "agent" and spec.backend and not (registry.agents or {})[spec.backend] then
+            vim.notify(
+              ("ai: unknown agent backend '%s' -- one of %s"):format(spec.backend, table.concat(M.backends(), ", ")),
+              vim.log.levels.WARN
+            )
+            return nil
           end
           overrides[layer][name] = vim.tbl_extend("force", overrides[layer][name] or {}, spec)
           M.emit(name)
@@ -352,6 +406,12 @@ in {
               table.insert(cmd, "-H")
               table.insert(cmd, "Authorization: Bearer " .. k)
             end
+            if r.url:find("opencode.ai", 1, true) then
+              for name, value in pairs(require("ai.opencode").headers("models")) do
+                table.insert(cmd, "-H")
+                table.insert(cmd, name .. ": " .. value)
+              end
+            end
             vim.system(cmd, {text = true}, function(obj)
               vim.schedule(function()
                 local ok, parsed = pcall(vim.json.decode, obj.stdout or "")
@@ -368,9 +428,23 @@ in {
               end)
             end)
           else
+            local agent = r.backend and registry.agents and registry.agents[r.backend] or nil
+            if agent and type(agent.models) == "table" then
+              return done(vim.deepcopy(agent.models))
+            end
+            -- An ACP agent bound to one provider wants bare model names.
+            local prefix = agent and agent.models and (agent.models .. "/") or nil
             vim.system({"opencode", "models"}, {text = true}, function(obj)
               vim.schedule(function()
-                done(vim.split(obj.stdout or "", "\n", {trimempty = true}))
+                local list = vim.split(obj.stdout or "", "\n", {trimempty = true})
+                if prefix then
+                  list = vim.tbl_map(function(m)
+                    return m:sub(#prefix + 1)
+                  end, vim.tbl_filter(function(m)
+                    return m:sub(1, #prefix) == prefix
+                  end, list))
+                end
+                done(list)
               end)
             end)
           end
@@ -501,7 +575,9 @@ in {
             :find()
         end
 
-        --- Pick a model for `name`, then run `cb` if given.
+        --- Pick a model for `name`, then run `cb` if given. With nothing to
+        --- choose from the role keeps its model and `cb` still runs, so a
+        --- backend that cannot list models is not a dead end.
         function M.pick(name, cb)
           if not name then
             select_from(M.roles(), "ai: select role", function(role)
@@ -510,6 +586,17 @@ in {
             return
           end
           M.models(name, function(list)
+            if #list == 0 then
+              local r = M.role(name)
+              vim.notify(
+                ("ai: no model list for %s, keeping %s"):format(name, tostring(r and r.model or "the agent's default")),
+                vim.log.levels.INFO
+              )
+              if cb then
+                cb(r and r.model or nil)
+              end
+              return
+            end
             select_from(list, "ai: model for " .. name, function(choice)
               M.set(name, choice)
               vim.notify("ai: " .. name .. " -> " .. choice)
@@ -529,7 +616,7 @@ in {
       -- Segments are separate lualine components (see lualine.nix) so each
       -- gets its own colour without embedding highlight escapes in a string.
       --- Width-ordered: the least useful segment is dropped first.
-      local PRIORITY = {"edit", "ask", "completion", "next-edit", "agent"}
+      local PRIORITY = {"edit", "ask", "completion", "next-edit", "agent", "cli"}
 
       _G.ai_lualine_role = function(name)
         local ok, ai = pcall(require, "ai")
@@ -672,7 +759,7 @@ in {
         if given == 0 or (given == 1 and not trailing) then
           return prefix_filter(ai.roles(), lead)
         end
-        return prefix_filter({"ollama", "opencode", "opencode_go", "anthropic", "openrouter"}, lead)
+        return prefix_filter(vim.list_extend(ai.backends(), {"ollama", "opencode_go", "anthropic", "openrouter"}), lead)
       end,
       desc = "AI: repoint a role at another backend",
     })
@@ -685,8 +772,8 @@ in {
           string.format(
             "  %-12s %-26s %-12s %-12s %-11s %s",
             r.role,
-            tostring(r.model),
-            tostring(r.endpoint),
+            tostring(r.model or "-"),
+            tostring(r.endpoint or "-"),
             tostring(r.backend),
             tostring(r.auth or "-"),
             r.source

@@ -11,11 +11,16 @@
 # capability (true fill-in-the-middle); "instruct" is derived -- a base model
 # reports nothing beyond completion/insert and will not follow an instruction.
 #
-#   ask         <leader>aa  talk about code in a chat buffer
-#   edit        <leader>ae  rewrite a selection or function in place
-#   agent       <leader>ad  hand a task to a CLI agent in a terminal
-#   completion  ghost text / cmp candidates as you type
-#   next-edit   predict the edit you are about to make, then apply it
+#   agent       <leader>a*  avante's agentic sidebar; backend chosen per project
+#   edit        <leader>ae  avante inline rewrite, on an HTTP model (ollama by
+#                           default): an ACP agent cannot serve it
+#   cli         <leader>k*  sidekick's terminal agents; `claude` runs this model
+#
+# Set aside while avante is the whole story -- still configured here, their
+# plugin files (codecompanion.nix, minuet.nix) just aren't imported:
+#   ask         talk about code in a codecompanion chat buffer
+#   completion  minuet ghost text / cmp candidates as you type
+#   next-edit   minuet duet: predict the edit you are about to make
 #
 {
   # kind = "key"    -> env var first, `pass` consulted only on a miss
@@ -94,13 +99,14 @@
       model = "qwen2.5-coder:3b-instruct";
       requires = ["instruct"];
     };
-    # codecompanion applies inline edits itself with nvim_buf_set_text, so the
-    # model needs no tool-calling -- it only has to follow instructions, which
-    # a base model will not.
+    # avante applies inline edits itself from a <code> block in the reply, so
+    # the model needs no tool-calling -- it only has to follow instructions,
+    # which a base model will not. Any HTTP backend works here (opencode-go,
+    # say); an ACP agent does not, and falls back to the agent provider.
     edit = {
       backend = "ollama";
       endpoint = "ollama";
-      model = "qwen2.5-coder:3b-instruct";
+      model = "qwen2.5-coder:7b-instruct";
       requires = ["instruct"];
     };
     # Reached over ACP: the opencode binary supplies its own credentials, so
@@ -109,15 +115,40 @@
       backend = "opencode";
       model = "openai/gpt-5.5";
     };
-    agent = {
+    # No default on purpose. A project names its backend (one of `agents`
+    # below) and model in .nvim.lua:
+    #   require("ai").setup({agent = {backend = "claude-code", model = "claude-sonnet-5"}})
+    # or <leader>aA picks one for the session. Until then avante is not even
+    # set up, and <leader>aa only offers the picker.
+    agent = {};
+    cli = {
       command = "claude";
       model = "claude-sonnet-5";
+    };
+  };
+
+  # What the agent role can point at. ACP backends run a CLI that holds its
+  # own credentials, and the model reaches them through the environment they
+  # are spawned with (claude reads ANTHROPIC_MODEL, opencode reads
+  # OPENCODE_CONFIG_CONTENT). An HTTP backend names an endpoint above and
+  # carries that endpoint's credential. `models` is what the picker offers
+  # an ACP agent: a list when the agent cannot enumerate them itself (claude
+  # has no models command), or a provider prefix to narrow `opencode models`.
+  agents = {
+    claude-code = {
+      transport = "acp";
+      models = ["claude-sonnet-5" "claude-opus-5" "claude-fable-5-1" "claude-haiku-4-5-20251001"];
+    };
+    opencode = {transport = "acp";};
+    opencode-go = {
+      transport = "http";
+      endpoint = "opencode-go";
     };
   };
 
   # Opt-in overlay chosen by NVIM_AI_TIER. Unset var = the defaults above.
   tiers.big = {
     completion.model = "qwen2.5-coder:3b-base";
-    edit.model = "qwen2.5-coder:3b-instruct";
+    edit.model = "devstral:24b";
   };
 }

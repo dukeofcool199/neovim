@@ -41,3 +41,34 @@ as a JSON object. Measured on that model, against samples in six languages:
   survived, and the chat tasks run on the `ask` model where none of this applies.
 
 `<leader>aT` raises the `edit` model first, for the tasks a 3B model cannot hold.
+
+## Choosing the agent per project
+
+`<leader>aa` opens avante, and avante has no default backend: on a fresh project it
+offers a picker instead. The durable answer lives in the project's `.nvim.lua`
+(Neovim's `exrc`, trusted once with `:trust`):
+
+```lua
+require("ai").setup({
+  agent = { backend = "claude-code", model = "claude-sonnet-5" },
+})
+```
+
+| backend | transport | model reaches it as |
+|---|---|---|
+| `claude-code` | ACP, `claude-agent-acp` over your own `claude` login | `ANTHROPIC_MODEL` in the agent's environment |
+| `opencode` | ACP, `opencode acp` | `OPENCODE_CONFIG_CONTENT` in the agent's environment |
+| `opencode-go` | HTTP, OpenCode Go with the `opencode-go` credential | per request |
+
+`<leader>ae` (inline edit) runs on the `edit` role, not the agent: avante needs a plain
+HTTP model that answers with a `<code>` block, and ACP agents answer as agents. Local
+ollama by default; `edit = { backend = "opencode-go", model = "glm-5.3-flash" }` moves it.
+Any other role takes the same shape, so one file can also pin `cli`.
+
+`<leader>aq` drops the quickfix list into the agent's prompt as `- path:line:col [E] text`
+lines, unsent, with the files attached to the sidebar's context; `<leader>aQ` does the
+location list. Finish the instruction and submit.
+`<leader>aA` makes the same choice for one session; `:AiStatus` shows what won.
+Sidekick's terminals live under `<leader>k` (`kk` toggle, `kc` claude, `ki` aider, `ko`
+opencode, `kP` pi, `kt`/`kv`/`kf`/`kq`/`kg` send this/selection/file/quickfix/diagnostics);
+its claude tool reads the `cli` role.

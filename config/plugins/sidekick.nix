@@ -1,6 +1,10 @@
+# sidekick.nvim -- CLI agents in a terminal split, the whole set under
+# <leader>k: claude, aider, opencode, pi, plus sending editor context into
+# whichever is running. Avante (<leader>a) is the sidebar; this is the
+# terminal. The claude tool follows the `cli` role in config/ai/registry.nix.
 {pkgs, ...}: let
   registry = import ../ai/registry.nix;
-  claudeModel = registry.roles.agent.model;
+  claudeModel = registry.roles.cli.model;
 
   sidekick-nvim = pkgs.vimUtils.buildVimPlugin {
     name = "sidekick.nvim";
@@ -62,7 +66,7 @@ in {
       -- with. require("sidekick.config").setup() must not be re-called:
       -- it rebuilds from defaults and would discard this.
       require("ai").on_change(function(name, r)
-        if name ~= "agent" or not r then
+        if name ~= "cli" or not r then
           return
         end
         local cfg = require("sidekick.config")
@@ -74,4 +78,32 @@ in {
       end)
     end
   '';
+
+  keymaps = let
+    cli = call: {__raw = "function() require('sidekick.cli').${call} end";};
+    map = mode: key: call: desc: {
+      inherit mode key;
+      action = cli call;
+      options = {
+        inherit desc;
+        silent = true;
+        noremap = true;
+      };
+    };
+    nv = ["n" "v"];
+  in [
+    (map nv "<leader>kk" "toggle()" "Toggle CLI")
+    (map "n" "<leader>kc" "toggle({ name = 'claude', focus = true })" "Toggle Claude Code")
+    (map "n" "<leader>ki" "toggle({ name = 'aider', focus = true })" "Toggle Aider")
+    (map "n" "<leader>ko" "toggle({ name = 'opencode', focus = true })" "Toggle opencode")
+    (map "n" "<leader>kP" "toggle({ name = 'pi', focus = true })" "Toggle pi")
+    (map "n" "<leader>ks" "select()" "Select CLI tool")
+    (map "n" "<leader>kd" "close()" "Detach CLI session")
+    (map nv "<leader>kp" "prompt()" "Select prompt")
+    (map nv "<leader>kt" "send({ msg = '{this}' })" "Send this")
+    (map "v" "<leader>kv" "send({ msg = '{selection}' })" "Send selection")
+    (map "n" "<leader>kf" "send({ msg = '{file}' })" "Send file")
+    (map "n" "<leader>kq" "send({ msg = '{quickfix}' })" "Send quickfix list")
+    (map "n" "<leader>kg" "send({ msg = '{diagnostics}' })" "Send diagnostics")
+  ];
 }

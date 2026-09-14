@@ -1,0 +1,22 @@
+--- a/lua/avante/selection.lua
++++ b/lua/avante/selection.lua
+@@ -162,6 +162,9 @@
+         table.insert(response_lines, line)
+       end
+     end
++    -- Nothing inside <code></code> yet: leave the buffer alone rather than
++    -- replace the selection with nothing.
++    if #response_lines == 0 then return end
+     if #response_lines == 1 then
+       local first_line = response_lines[1]
+       local first_line_indentation = Utils.get_indentation(first_line)
+@@ -190,6 +193,9 @@
+       return
+     end
+     if self.prompt_input then self.prompt_input:stop_spinner() end
++    if not full_response:find("<code>", 1, true) then
++      Utils.warn("No <code> block in the response; selection left untouched", { title = "Avante" })
++    end
+     vim.defer_fn(function() self:close_editing_input() end, 0)
+     Utils.debug("full response:", full_response)
+   end

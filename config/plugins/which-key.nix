@@ -34,6 +34,10 @@
           group = "Jujutsu";
         }
         {
+          __unkeyed-1 = "<leader>k";
+          group = "Sidekick";
+        }
+        {
           __unkeyed-1 = "<leader>m";
           group = "Multi Cursor";
         }

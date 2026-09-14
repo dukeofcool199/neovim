@@ -1,33 +1,18 @@
-# Intent-named AI bindings. Every map here says what you want done, never
-# which plugin does it: Ask, Edit and Task reach codecompanion, Do and Send
-# reach sidekick's agent terminals, Completion and Next reach minuet, Yank
-# reaches prompt-yank. Lowercase acts with the registry's current model; the
-# capitalised sibling chooses first.
-#
-# Edit is freeform -- you type the instruction. Task is the opposite: a named
-# prompt from config/ai/prompts, written once so a small local model gets the
-# same brief every time.
+# Intent-named AI bindings under <leader>a: avante, all of it. Ask, Edit
+# (on the `edit` role's HTTP model), chats, context, history, quickfix into
+# the prompt. Yank reaches prompt-yank. Lowercase acts with the registry's
+# current backend and model; the capitalised sibling chooses first.
+# Sidekick's terminal agents live under <leader>k (config/plugins/sidekick.nix).
 {...}: {
   extraConfigLua = ''
     package.preload["ai.actions"] = function()
       local M = {}
 
-      local function cli()
-        return require("sidekick.cli")
+      local function visual()
+        return vim.fn.mode():match("^[vV\22]") ~= nil
       end
 
-      -- Ask ---------------------------------------------------------------
-      function M.ask()
-        vim.cmd("CodeCompanionChat")
-      end
-
-      function M.ask_pick()
-        require("ai").pick("ask", function()
-          vim.cmd("CodeCompanionChat")
-        end)
-      end
-
-      -- Edit --------------------------------------------------------------
+      -- Region --------------------------------------------------------------
       local FUNCTION_NODES = {
         ["function"] = true,
         arrow_function = true,
@@ -66,17 +51,13 @@
         return nil
       end
 
-      --- Put '< and '> around the region an AI action should act on: the live
+      --- Put '< and '> around the region an action should act on: the live
       --- visual selection, or the enclosing function when there is none.
-      ---
-      --- The marks are the load-bearing part, not the `:range`. codecompanion
-      --- treats any range as "visual" but then reads the marks rather than the
-      --- range itself, so a command built from line numbers alone sends
-      --- whatever happened to be selected last.
+      --- Returns the line range.
       local function mark_region()
-        if vim.fn.mode():match("^[vV\22]") then
+        if visual() then
           vim.cmd("normal! \27")
-          return
+          return vim.fn.line("'<"), vim.fn.line("'>")
         end
         local first, last = enclosing_function()
         if not first then
@@ -86,168 +67,200 @@
         local tail = vim.api.nvim_buf_get_lines(0, last - 1, last, false)[1] or ""
         vim.fn.setpos("'<", {0, first, 1, 0})
         vim.fn.setpos("'>", {0, last, math.max(1, #tail), 0})
+        return first, last
       end
 
-      --- Inline edit over the enclosing function, falling back to the buffer.
-      function M.edit()
-        mark_region()
-        vim.api.nvim_feedkeys(":'<,'>CodeCompanion ", "n", false)
-      end
-
-      function M.edit_pick()
-        require("ai").pick("edit", function()
-          M.edit()
-        end)
-      end
-
-      -- Task --------------------------------------------------------------
-      -- Named prompts from codecompanion's library: the ones that rewrite a
-      -- selection run on the `edit` model, the ones that open a chat run on
-      -- `ask`. Drop a markdown file into .codecompanion/prompts and it joins
-      -- the list.
-
-      local function run_task(alias)
-        require("codecompanion").prompt(alias, {range = 2})
-      end
-
-      -- Builtins that config/ai/prompts covers better, hidden so the list holds
-      -- one entry per intent.
-      local SUPERSEDED = {tests = true}
-
-      local function tasks()
-        local palette = require("codecompanion.action_palette")
-        local context = require("codecompanion.utils.context").get(0)
-        local found = {}
-        for _, item in ipairs(palette.get_cached_items(context)) do
-          local alias = item.opts and item.opts.alias
-          if alias and not SUPERSEDED[alias] and (item.interaction == "inline" or item.interaction == "chat") then
-            table.insert(found, item)
-          end
+      -- Avante --------------------------------------------------------------
+      -- Nothing is set up until the agent role has a backend, so on a project
+      -- without one every avante key offers the picker instead.
+      local function ready()
+        if require("ai.avante").ensure() then
+          return true
         end
-        table.sort(found, function(a, b)
-          if a.interaction ~= b.interaction then
-            return a.interaction == "inline"
-          end
-          return a.name < b.name
-        end)
-        return found
+        vim.notify(
+          "ai: no agent backend -- pick one, or put require('ai').setup({agent = {backend = ..., model = ...}}) in .nvim.lua",
+          vim.log.levels.WARN
+        )
+        M.ask_pick()
+        return false
       end
 
-      local PLACEMENT = {
-        new = "new buffer",
-        before = "above selection",
-        add = "below selection",
-      }
-
-      --- Where a task's output lands, and which role pays for it.
-      local function destination(item)
-        if item.interaction ~= "inline" then
-          return "chat", "ask"
-        end
-        return PLACEMENT[item.opts.placement] or "replace selection", "edit"
+      local function api()
+        return require("avante.api")
       end
 
-      function M.task(alias)
-        mark_region()
-        run_task(alias)
-      end
-
-      local function task_menu()
-        local found = tasks()
-        if #found == 0 then
-          vim.notify("ai: no tasks in the prompt library", vim.log.levels.WARN)
+      --- Toggle the sidebar; with a selection, ask about it.
+      function M.ask()
+        if not ready() then
           return
         end
-
-        local ai = require("ai")
-        local name_w, where_w = 0, 0
-        local rows = {}
-        for _, item in ipairs(found) do
-          local where, role = destination(item)
-          name_w = math.max(name_w, vim.fn.strdisplaywidth(item.name))
-          where_w = math.max(where_w, vim.fn.strdisplaywidth(where))
-          table.insert(rows, {item.name, where, ai.describe(role)})
+        if visual() then
+          api().ask()
+        else
+          vim.cmd("AvanteToggle")
         end
-        local fmt = ("%%-%ds   %%-%ds   %%s"):format(name_w, where_w)
-        local labels = vim.tbl_map(function(row)
-          return fmt:format(row[1], row[2], row[3])
-        end, rows)
-
-        vim.ui.select(labels, {prompt = "AI: task"}, function(_, idx)
-          if idx then
-            run_task(found[idx].opts.alias)
-          end
-        end)
       end
 
-      --- Both entry points mark the region first: vim.ui.select drops visual
-      --- mode, so by the time a menu answers there is nothing left to read.
-      function M.task_pick()
-        mark_region()
-        task_menu()
-      end
-
-      --- For the tasks a small model cannot hold: raise the edit model, then
-      --- choose. The choice sticks for the session, the same as <leader>aE.
-      function M.task_pick_model()
-        mark_region()
-        require("ai").pick("edit", function()
-          task_menu()
-        end)
-      end
-
-      -- Do ----------------------------------------------------------------
-      function M.agent()
-        local r = require("ai").role("agent")
-        cli().toggle({name = (r and r.command) or "claude", focus = true})
-      end
-
-      function M.agent_pick()
-        cli().select()
-      end
-
-      -- Completion --------------------------------------------------------
-      function M.complete_toggle()
-        require("minuet-project").toggle()
-      end
-
-      function M.next_predict()
-        require("minuet.duet").action.predict()
-      end
-
-      function M.next_apply()
-        require("minuet.duet").action.apply()
-      end
-
-      -- Send --------------------------------------------------------------
-      function M.send(what)
-        cli().send({msg = what})
-      end
-
-      local SEND = {
-        {"This (cursor context)", "{this}"},
-        {"Selection", "{selection}"},
-        {"Whole file", "{file}"},
-      }
-
-      function M.send_pick()
-        local labels = vim.tbl_map(function(e)
-          return e[1]
-        end, SEND)
-        table.insert(labels, "Prompt library...")
-        vim.ui.select(labels, {prompt = "AI: send to agent"}, function(_, idx)
-          if not idx then
+      --- Backend first, then a model that backend can reach, then open.
+      function M.ask_pick()
+        local ai = require("ai")
+        vim.ui.select(ai.backends(), {prompt = "AI: agent backend"}, function(backend)
+          if not backend then
             return
           end
-          if idx > #SEND then
-            cli().prompt()
-          else
-            M.send(SEND[idx][2])
-          end
+          ai.set("agent", {backend = backend})
+          ai.pick("agent", function()
+            if require("ai.avante").ensure() then
+              vim.cmd("AvanteAsk")
+            end
+          end)
         end)
       end
 
-      -- Yank --------------------------------------------------------------
+      --- Rewrite the selection or enclosing function in place, on the
+      --- `edit` role's model.
+      function M.edit()
+        local first, last = mark_region()
+        if ready() then
+          require("ai.avante").edit(first, last)
+        end
+      end
+
+      --- Endpoint first (ollama, opencode-go, ...), then a model it serves.
+      function M.edit_pick()
+        local first, last = mark_region()
+        local ai = require("ai")
+        vim.ui.select(ai.http_backends(), {prompt = "AI: edit backend"}, function(backend)
+          if not backend then
+            return
+          end
+          ai.set("edit", {backend = backend})
+          ai.pick("edit", function()
+            if ready() then
+              require("ai.avante").edit(first, last)
+            end
+          end)
+        end)
+      end
+
+      local function command(cmd)
+        return function()
+          if ready() then
+            vim.cmd(cmd)
+          end
+        end
+      end
+
+      local function call(fn)
+        return function()
+          if ready() then
+            api()[fn]()
+          end
+        end
+      end
+
+      M.new = command("AvanteChatNew")
+      M.history = command("AvanteHistory")
+      M.focus = command("AvanteFocus")
+      M.stop = command("AvanteStop")
+      M.clear = command("AvanteClear")
+      M.refresh = command("AvanteRefresh")
+      M.repomap = command("AvanteShowRepoMap")
+      M.add_buffer = call("add_buffer_files")
+      M.zen = call("zen_mode")
+
+      function M.add_all_buffers()
+        if not ready() then
+          return
+        end
+        for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+          local name = vim.api.nvim_buf_get_name(buf)
+          if vim.bo[buf].buflisted and name ~= "" and vim.fn.filereadable(name) == 1 then
+            api().add_selected_file(name)
+          end
+        end
+      end
+
+      --- Live model change. ACP sessions switch in place; the environment
+      --- the registry sets only reaches the next chat, so this is the way to
+      --- change a running claude or opencode. HTTP backends use avante's list.
+      function M.models()
+        if not ready() then
+          return
+        end
+        local r = require("ai").role("agent")
+        if r and r.transport == "acp" then
+          api().select_acp_model()
+        else
+          api().select_model()
+        end
+      end
+
+      M.acp_mode = call("select_acp_mode")
+
+      -- Quickfix ------------------------------------------------------------
+      local MAX_ITEMS = 200
+
+      --- A list as a markdown block: the title, then one `- path:line:col
+      --- [E] text` per entry. Returns the block and the readable files it
+      --- names, for the sidebar's context.
+      local function list_block(info, label)
+        local cwd = vim.fs.normalize(vim.fn.getcwd())
+        local lines, files, seen = {}, {}, {}
+        local title = info.title or ""
+        if title:match("^:%S") then
+          title = ""
+        end
+        table.insert(lines, label .. (title ~= "" and (": " .. title) or ""))
+        for i, item in ipairs(info.items) do
+          if i > MAX_ITEMS then
+            table.insert(lines, ("- ... and %d more"):format(#info.items - MAX_ITEMS))
+            break
+          end
+          local name = item.filename
+          if (not name or name == "") and item.bufnr and item.bufnr > 0 then
+            name = vim.api.nvim_buf_get_name(item.bufnr)
+          end
+          local shown = "[No Name]"
+          if name and name ~= "" then
+            name = vim.fs.normalize(name)
+            shown = name:sub(1, #cwd + 1) == cwd .. "/" and name:sub(#cwd + 2) or name
+            if not seen[name] and vim.fn.filereadable(name) == 1 then
+              seen[name] = true
+              table.insert(files, name)
+            end
+          end
+          local where = shown
+          if (item.lnum or 0) > 0 then
+            where = where .. ":" .. item.lnum
+            if (item.col or 0) > 0 then
+              where = where .. ":" .. item.col
+            end
+          end
+          local kind = (item.type and item.type ~= "") and (" [" .. item.type:upper() .. "]") or ""
+          local text = (item.text or ""):gsub("%s+$", "")
+          text = vim.trim(text)
+          table.insert(lines, ("- %s%s%s"):format(where, kind, text ~= "" and (" " .. text) or ""))
+        end
+        return table.concat(lines, "\n"), files
+      end
+
+      --- The quickfix list (or the window's location list) into the agent's
+      --- prompt, unsent, its files attached.
+      function M.quickfix(loclist)
+        local info = loclist and vim.fn.getloclist(0, {items = 0, title = 0}) or vim.fn.getqflist({items = 0, title = 0})
+        if #(info.items or {}) == 0 then
+          vim.notify("ai: " .. (loclist and "location list" or "quickfix list") .. " is empty", vim.log.levels.WARN)
+          return
+        end
+        if not ready() then
+          return
+        end
+        local text, files = list_block(info, loclist and "Location list" or "Quickfix")
+        require("ai.avante").stage(text, files)
+      end
+
+      -- Yank ----------------------------------------------------------------
       local YANK = {
         {"Smart (file or selection)", ""},
         {"Function", "function"},
@@ -264,8 +277,8 @@
       --- vim.ui.select drops visual mode, so the selection is restored with
       --- `gv` before the command runs.
       function M.yank_pick()
-        local visual = vim.fn.mode():match("^[vV\22]") ~= nil
-        if visual then
+        local was_visual = visual()
+        if was_visual then
           vim.cmd("normal! \27")
         end
         local labels = vim.tbl_map(function(e)
@@ -275,7 +288,7 @@
           if not idx then
             return
           end
-          if visual then
+          if was_visual then
             vim.cmd("normal! gv")
           end
           local arg = YANK[idx][2]
@@ -283,15 +296,18 @@
         end)
       end
 
-      -- Control -----------------------------------------------------------
+      -- Control -------------------------------------------------------------
       local SETTINGS = {
-        {"Model...", "AiPick"},
+        {"Agent: backend and model...", "lua require('ai.actions').ask_pick()"},
+        {"Agent: model of the running session", "lua require('ai.actions').models()"},
+        {"Agent: mode of the running ACP session", "lua require('ai.actions').acp_mode()"},
+        {"Agent: clear chat", "lua require('ai.actions').clear()"},
+        {"Agent: repo map", "lua require('ai.actions').repomap()"},
+        {"Model for any role...", "AiPick"},
         {"Status", "AiStatus"},
         {"Doctor (check models suit their roles)", "AiDoctor"},
         {"Credentials", "AiAuth"},
         {"Credentials (re-check)", "AiAuth!"},
-        {"Tier: small", "AiTier small"},
-        {"Tier: big", "AiTier big"},
         {"Reset overrides", "AiReset"},
       }
 
@@ -312,175 +328,35 @@
 
   keymaps = let
     act = fn: {__raw = "function() require('ai.actions').${fn} end";};
+    map = mode: key: fn: desc: {
+      inherit mode key;
+      action = act fn;
+      options = {
+        inherit desc;
+        silent = true;
+        noremap = true;
+      };
+    };
+    nv = ["n" "v"];
   in [
-    {
-      mode = ["n" "v"];
-      key = "<leader>aa";
-      action = "<cmd>CodeCompanionChat<cr>";
-      options = {
-        desc = "Ask";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>aA";
-      action = act "ask_pick()";
-      options = {
-        desc = "Ask (choose model)";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "v";
-      key = "<leader>ae";
-      action = ":CodeCompanion ";
-      options = {
-        desc = "Edit selection";
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>ae";
-      action = act "edit()";
-      options = {
-        desc = "Edit function";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>aE";
-      action = act "edit_pick()";
-      options = {
-        desc = "Edit (choose model)";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = ["n" "v"];
-      key = "<leader>at";
-      action = act "task_pick()";
-      options = {
-        desc = "Task (document, fix, tests, review...)";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = ["n" "v"];
-      key = "<leader>aT";
-      action = act "task_pick_model()";
-      options = {
-        desc = "Task (choose model)";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>ad";
-      action = act "agent()";
-      options = {
-        desc = "Do (agent terminal)";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>aD";
-      action = act "agent_pick()";
-      options = {
-        desc = "Do (choose agent)";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>ac";
-      action = act "complete_toggle()";
-      options = {
-        desc = "Completion toggle";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>an";
-      action = act "next_predict()";
-      options = {
-        desc = "Next edit: predict";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>aN";
-      action = act "next_apply()";
-      options = {
-        desc = "Next edit: apply";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>as";
-      action = act "send('{this}')";
-      options = {
-        desc = "Send context to agent";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "v";
-      key = "<leader>as";
-      action = act "send('{selection}')";
-      options = {
-        desc = "Send selection to agent";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = ["n" "v"];
-      key = "<leader>aS";
-      action = act "send_pick()";
-      options = {
-        desc = "Send... (choose what)";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = ["n" "v"];
-      key = "<leader>ay";
-      action = act "yank_pick()";
-      options = {
-        desc = "Yank context";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>am";
-      action = act "settings_pick()";
-      options = {
-        desc = "Models and credentials";
-        silent = true;
-        noremap = true;
-      };
-    }
+    (map nv "<leader>aa" "ask()" "Ask (toggle sidebar; selection asks about it)")
+    (map "n" "<leader>aA" "ask_pick()" "Ask (choose backend and model)")
+    (map nv "<leader>ae" "edit()" "Edit function/selection in place")
+    (map nv "<leader>aE" "edit_pick()" "Edit (choose backend and model)")
+    (map "n" "<leader>an" "new()" "New chat")
+    (map "n" "<leader>ah" "history()" "History of chats")
+    (map "n" "<leader>af" "focus()" "Focus sidebar / code")
+    (map "n" "<leader>ab" "add_buffer()" "Buffer into context")
+    (map "n" "<leader>aB" "add_all_buffers()" "All buffers into context")
+    (map "n" "<leader>aq" "quickfix()" "Quickfix list into the prompt")
+    (map "n" "<leader>aQ" "quickfix(true)" "Location list into the prompt")
+    (map "n" "<leader>ax" "stop()" "Stop the request")
+    (map "n" "<leader>ac" "clear()" "Clear the chat")
+    (map "n" "<leader>ar" "refresh()" "Refresh sidebar")
+    (map "n" "<leader>aR" "repomap()" "Repo map")
+    (map "n" "<leader>az" "zen()" "Zen: chat full view")
+    (map "n" "<leader>aM" "models()" "Model of the running session")
+    (map "n" "<leader>am" "settings_pick()" "Models and credentials")
+    (map nv "<leader>ay" "yank_pick()" "Yank context")
   ];
 }
