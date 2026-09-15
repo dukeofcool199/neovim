@@ -1,10 +1,11 @@
-# sidekick.nvim -- CLI agents in a terminal split, the whole set under
+# sidekick.nvim -- CLI agents in a floating terminal, the whole set under
 # <leader>a: claude, aider, opencode, pi, plus sending editor context into
 # whichever is running. The claude tool follows the `cli` role in
 # config/ai/registry.nix.
 {pkgs, ...}: let
   registry = import ../ai/registry.nix;
   claudeModel = registry.roles.cli.model;
+  cliCommand = registry.roles.cli.command;
 
   sidekick-nvim = pkgs.vimUtils.buildVimPlugin {
     name = "sidekick.nvim";
@@ -28,6 +29,26 @@ in {
       require("ai.auth").export("opencode-go")
     end)
 
+    -- One key in, same key out. Acts on the most recently focused terminal
+    -- rather than asking sidekick to resolve a session, so several running
+    -- agents never raise a picker on the fast path; with none running it
+    -- starts the `cli` role's tool.
+    function _G.sidekick_overlay()
+      local terminals = require("sidekick.cli.terminal").sessions()
+      table.sort(terminals, function(a, b)
+        return a.atime > b.atime
+      end)
+      local term = terminals[1]
+      if not term then
+        return require("sidekick.cli").toggle({ name = "${cliCommand}", focus = true })
+      end
+      if term:is_focused() then
+        term:hide()
+      else
+        term:focus()
+      end
+    end
+
     local sidekick_ok, sidekick = pcall(require, "sidekick")
     if sidekick_ok then
       sidekick.setup({
@@ -37,9 +58,19 @@ in {
         cli = {
           picker = "telescope",
           win = {
-            layout = "${registry.ui.panel.position}",
-            split = {
-              width = ${toString registry.ui.panel.width},
+            -- An overlay, not a split: the window underneath keeps its
+            -- layout, so a full-screen review stays readable the moment the
+            -- terminal is hidden. In a float sidekick's nav_* keys go inert
+            -- and <c-h/j/k/l> reach the CLI instead.
+            layout = "float",
+            float = {
+              width = ${toString registry.ui.overlay.width},
+              height = ${toString registry.ui.overlay.height},
+            },
+            keys = {
+              -- Buffer-local, so <c-g> is only stolen from the agent
+              -- terminals and every other terminal keeps it.
+              overlay = { "<c-g>", "hide", mode = "nt", desc = "hide the overlay" },
             },
           },
           tools = {
@@ -92,6 +123,16 @@ in {
     };
     nv = ["n" "v"];
   in [
+    {
+      mode = ["n" "i" "v"];
+      key = "<C-g>";
+      action = {__raw = "function() _G.sidekick_overlay() end";};
+      options = {
+        desc = "Toggle agent overlay";
+        silent = true;
+        noremap = true;
+      };
+    }
     (map nv "<leader>aa" "toggle()" "Toggle CLI")
     (map "n" "<leader>ac" "toggle({ name = 'claude', focus = true })" "Toggle Claude Code")
     (map "n" "<leader>ai" "toggle({ name = 'aider', focus = true })" "Toggle Aider")

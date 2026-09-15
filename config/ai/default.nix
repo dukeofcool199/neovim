@@ -11,7 +11,7 @@
   registry = import ./registry.nix;
   registryJson = builtins.toJSON registry;
 in {
-  imports = [./actions.nix ./progress.nix];
+  imports = [./actions.nix ./progress.nix ./cli.nix];
 
   extraConfigLuaPre = ''
     do

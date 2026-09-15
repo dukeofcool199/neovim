@@ -59,6 +59,15 @@
     width = 50;
   };
 
+  # The agent terminals float over the editor instead of splitting it, so a
+  # full-screen oversight.nvim review stays laid out underneath and the CLI
+  # toggles in and out on top of it. Fractions are of the editor; sidekick
+  # floors a float at 80x10.
+  ui.overlay = {
+    width = 0.85;
+    height = 0.85;
+  };
+
   # Each endpoint owns its credential, so pointing a role at a different
   # endpoint carries the right auth with it -- no per-role auth field to keep
   # in sync.

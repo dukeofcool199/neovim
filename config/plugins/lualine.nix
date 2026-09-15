@@ -74,6 +74,25 @@ in {
             })
             aiRoles)
           ++ [
+            # The sidekick CLI agents, which run in a float you toggle away:
+            # a spinner while one works, then a mark on one that stopped out
+            # of sight, held until you open its terminal again.
+            {
+              __unkeyed-1.__raw = ''function() return _G.ai_cli_status("working") end'';
+              cond.__raw = ''function() return _G.ai_cli_active("working") end'';
+              color = {
+                fg = "#fabd2f";
+                gui = "bold";
+              };
+            }
+            {
+              __unkeyed-1.__raw = ''function() return _G.ai_cli_status("done") end'';
+              cond.__raw = ''function() return _G.ai_cli_active("done") end'';
+              color = {
+                fg = "#b8bb26";
+                gui = "bold";
+              };
+            }
             {
               __unkeyed-1.__raw = "function() return _G.ninetynine_lualine_model() end";
               cond.__raw = "function() return _G.ninetynine_lualine_model ~= nil end";
