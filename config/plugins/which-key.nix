@@ -74,6 +74,10 @@
           group = "Toggle/Tab";
         }
         {
+          __unkeyed-1 = "<leader>v";
+          group = "Review";
+        }
+        {
           __unkeyed-1 = "<leader>w";
           group = "Workspace";
         }
