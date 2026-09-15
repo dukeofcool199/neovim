@@ -116,6 +116,8 @@
     end
 
     -- quickfix/location-list buffer-local keymaps
+    local list_undo = {}
+
     vim.api.nvim_create_autocmd("FileType", {
       pattern = "qf",
       callback = function(args)
@@ -124,8 +126,57 @@
         local info = vim.fn.getwininfo(winid)[1] or {}
         local is_loc = info.loclist == 1
 
-        local map = function(keys, action, desc)
-          vim.keymap.set("n", keys, action, { buffer = buf, silent = true, noremap = true, desc = desc })
+        local map = function(keys, action, desc, modes)
+          vim.keymap.set(modes or "n", keys, action, { buffer = buf, silent = true, noremap = true, desc = desc })
+        end
+
+        local function get_list(win, what)
+          if is_loc then
+            return what and vim.fn.getloclist(win, what) or vim.fn.getloclist(win)
+          end
+          return what and vim.fn.getqflist(what) or vim.fn.getqflist()
+        end
+
+        local function set_list(win, items, id, idx)
+          local what = { items = items, id = id }
+          if idx > 0 then
+            what.idx = idx
+          end
+          if is_loc then
+            vim.fn.setloclist(win, {}, "r", what)
+          else
+            vim.fn.setqflist({}, "r", what)
+          end
+        end
+
+        -- qf buffer line N is list entry N, so delete by cursor line, not by active idx
+        local function delete_range(first, last)
+          local win = vim.api.nvim_get_current_win()
+          local items = get_list(win)
+          if #items == 0 then
+            return
+          end
+          first, last = math.max(first, 1), math.min(last, #items)
+          if first > last then
+            return
+          end
+
+          local id = get_list(win, { id = 0 }).id
+          local stack = list_undo[buf]
+          if not stack or stack.id ~= id then
+            stack = { id = id }
+            list_undo[buf] = stack
+          end
+          table.insert(stack, vim.deepcopy(items))
+          if #stack > 32 then
+            table.remove(stack, 1)
+          end
+
+          for i = last, first, -1 do
+            table.remove(items, i)
+          end
+          set_list(win, items, id, math.min(first, #items))
+          pcall(vim.api.nvim_win_set_cursor, win, { math.min(first, math.max(#items, 1)), 0 })
         end
 
         map("q", is_loc and "<cmd>lclose<cr>" or "<cmd>cclose<cr>", "Close list")
@@ -133,24 +184,30 @@
           require("quicker").refresh(is_loc and winid or nil)
         end, "Refresh list")
 
-        -- delete current item from the list
         map("dd", function()
-          if is_loc then
-            local meta = vim.fn.getloclist(0, { idx = 0, id = 0 })
-            local list = vim.fn.getloclist(0)
-            if meta.idx > 0 and meta.idx <= #list then
-              table.remove(list, meta.idx)
-              vim.fn.setloclist(0, {}, "r", { items = list, id = meta.id })
-            end
-          else
-            local meta = vim.fn.getqflist({ idx = 0, id = 0 })
-            local list = vim.fn.getqflist()
-            if meta.idx > 0 and meta.idx <= #list then
-              table.remove(list, meta.idx)
-              vim.fn.setqflist({}, "r", { items = list, id = meta.id })
-            end
-          end
+          local line = vim.api.nvim_win_get_cursor(0)[1]
+          delete_range(line, line + vim.v.count1 - 1)
         end, "Delete list item")
+
+        map("d", function()
+          local first, last = vim.fn.line("v"), vim.fn.line(".")
+          if first > last then
+            first, last = last, first
+          end
+          vim.api.nvim_feedkeys(vim.keycode("<Esc>"), "nx", false)
+          delete_range(first, last)
+        end, "Delete selected list items", "x")
+
+        map("u", function()
+          local win = vim.api.nvim_get_current_win()
+          local stack = list_undo[buf]
+          local id = get_list(win, { id = 0 }).id
+          if not stack or stack.id ~= id or #stack == 0 then
+            vim.notify("Nothing to undo", vim.log.levels.WARN)
+            return
+          end
+          set_list(win, table.remove(stack), id, 1)
+        end, "Undo list delete")
       end,
     })
 
@@ -285,6 +342,98 @@
       vim.cmd("copen")
     end, { nargs = "+", complete = "file" })
 
+    -- Search pattern (@/, as set by * or /) to quickfix
+    local function pattern_items(bufnr, pat)
+      local items = {}
+      local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+      for lnum, line in ipairs(lines) do
+        local from = 0
+        while from <= #line do
+          local m = vim.fn.matchstrpos(line, pat, from)
+          local s, e = m[2], m[3]
+          if s < 0 then
+            break
+          end
+          table.insert(items, {
+            bufnr = bufnr,
+            lnum = lnum,
+            col = s + 1,
+            end_col = e + 1,
+            text = line,
+            valid = 1,
+          })
+          from = e > s and e or s + 1
+        end
+      end
+      return items
+    end
+
+    local function search_to_qf(all_buffers)
+      local pat = vim.fn.getreg("/")
+      if pat == "" then
+        vim.notify("No search pattern", vim.log.levels.WARN)
+        return
+      end
+
+      local bufs
+      if all_buffers then
+        bufs = vim.tbl_filter(function(b)
+          return vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buflisted and vim.bo[b].buftype == ""
+        end, vim.api.nvim_list_bufs())
+      else
+        bufs = { vim.api.nvim_get_current_buf() }
+      end
+
+      local items = {}
+      for _, b in ipairs(bufs) do
+        vim.list_extend(items, pattern_items(b, pat))
+      end
+
+      if #items == 0 then
+        vim.notify("No matches for /" .. pat, vim.log.levels.WARN)
+        return
+      end
+
+      vim.fn.setqflist({}, " ", { title = "/" .. pat, items = items })
+      vim.cmd("copen")
+    end
+
+    vim.api.nvim_create_user_command("Csearch", function() search_to_qf(false) end, {})
+    vim.api.nvim_create_user_command("Csearchall", function() search_to_qf(true) end, {})
+
+    -- Word/selection to quickfix, project-wide via grepprg
+    local function grep_literal(text, whole_word)
+      if text == "" then
+        return
+      end
+      local flags = whole_word and "-F -w " or "-F "
+      vim.cmd("silent grep! " .. flags .. vim.fn.shellescape(text))
+      if #vim.fn.getqflist() == 0 then
+        vim.notify("No matches for " .. text, vim.log.levels.WARN)
+      end
+    end
+
+    local function visual_text()
+      local ok, lines = pcall(
+        vim.fn.getregion,
+        vim.fn.getpos("'<"),
+        vim.fn.getpos("'>"),
+        { type = vim.fn.visualmode() }
+      )
+      if not ok or type(lines) ~= "table" then
+        return ""
+      end
+      return lines[1] or ""
+    end
+
+    vim.api.nvim_create_user_command("Cword", function(opts)
+      grep_literal(opts.args ~= "" and opts.args or vim.fn.expand("<cword>"), opts.args == "")
+    end, { nargs = "?" })
+
+    vim.api.nvim_create_user_command("Cselection", function()
+      grep_literal(visual_text(), false)
+    end, {})
+
     -- Auto-open quickfix after :grep/:make/:vimgrep/:helpgrep if results exist
     vim.api.nvim_create_autocmd("QuickFixCmdPost", {
       pattern = { "grep", "make", "vimgrep", "helpgrep" },
@@ -398,6 +547,30 @@
       key = "<leader>qg";
       action.__raw = ''function() local p = vim.fn.input("Grep to quickfix: ") if p ~= "" then vim.cmd("Cgrep " .. p) end end'';
       options = { desc = "Grep to quickfix"; silent = true; };
+    }
+    {
+      mode = "n";
+      key = "<leader>q/";
+      action = "<cmd>Csearch<cr>";
+      options = { desc = "Search pattern to quickfix (buffer)"; silent = true; };
+    }
+    {
+      mode = "n";
+      key = "<leader>q?";
+      action = "<cmd>Csearchall<cr>";
+      options = { desc = "Search pattern to quickfix (all buffers)"; silent = true; };
+    }
+    {
+      mode = "n";
+      key = "<leader>q*";
+      action = "<cmd>Cword<cr>";
+      options = { desc = "Word under cursor to quickfix (project)"; silent = true; };
+    }
+    {
+      mode = "x";
+      key = "<leader>q*";
+      action = ":<C-u>Cselection<cr>";
+      options = { desc = "Selection to quickfix (project)"; silent = true; };
     }
     {
       mode = "n";
