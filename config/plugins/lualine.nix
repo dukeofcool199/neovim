@@ -74,6 +74,11 @@ in {
             })
             aiRoles)
           ++ [
+            {
+              __unkeyed-1.__raw = "function() return _G.ninetynine_lualine_model() end";
+              cond.__raw = "function() return _G.ninetynine_lualine_model ~= nil end";
+              color = {fg = "#83a598";};
+            }
           ];
         lualine_y = ["filetype" "progress"];
         lualine_z = [

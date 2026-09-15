@@ -1,5 +1,8 @@
 # AI task prompts
 
+> codecompanion is not imported right now, so nothing in this section is bound
+> to a key. The prompts and the guidance below survive for when it comes back.
+
 `prompts/` holds one markdown file per named task. They reach Neovim through
 codecompanion's `prompt_library.markdown.dirs`, which is pointed at three places
 (`config/plugins/codecompanion.nix`):
@@ -42,11 +45,47 @@ as a JSON object. Measured on that model, against samples in six languages:
 
 `<leader>aT` raises the `edit` model first, for the tasks a 3B model cannot hold.
 
-## Choosing the agent per project
+## What is bound today
 
-`<leader>aa` opens avante, and avante has no default backend: on a fresh project it
-offers a picker instead. The durable answer lives in the project's `.nvim.lua`
-(Neovim's `exrc`, trusted once with `:trust`):
+Sidekick's terminal agents own `<leader>a`; its `claude` tool runs the `cli`
+role's model.
+
+| key | does |
+|---|---|
+| `aa` | toggle the CLI split |
+| `ac` `ai` `ao` `aP` | claude, aider, opencode, pi |
+| `as` `ad` | select a tool, detach the session |
+| `ap` | select a prompt |
+| `at` `av` `af` `aq` `ag` | send this / selection / file / quickfix / diagnostics |
+| `ay` | yank context (prompt-yank) |
+| `am` | models and credentials (`:AiPick`, `:AiStatus`, `:AiDoctor`, `:AiAuth`, `:AiReset`) |
+
+99 keeps its own namespace under `<leader>9` and its own two models, which it
+tracks outside this registry:
+
+| key | does |
+|---|---|
+| `9v` `9s` | visual replacement (edit model), project search (search model) |
+| `9m` `9M` `9p` | pick the edit model, the search model, the provider |
+| `9x` `9o` `9l` | stop all requests, open the last interaction, view logs |
+
+```lua
+-- .nvim.lua
+require("ninetynine").set_models({
+  edit   = "openai/gpt-5.6-fast",
+  search = "openai/gpt-5.6-pro",
+})
+```
+
+## Choosing the agent per project (avante, dormant)
+
+avante is not imported right now — `config/plugins/avante.nix` is on disk but
+out of `config/plugins/default.nix`, and the `agent` and `edit` roles go with
+it. Restoring the import brings back everything below.
+
+avante has no default backend: on a fresh project it offers a picker instead.
+The durable answer lives in the project's `.nvim.lua` (Neovim's `exrc`, trusted
+once with `:trust`):
 
 ```lua
 require("ai").setup({
@@ -60,15 +99,8 @@ require("ai").setup({
 | `opencode` | ACP, `opencode acp` | `OPENCODE_CONFIG_CONTENT` in the agent's environment |
 | `opencode-go` | HTTP, OpenCode Go with the `opencode-go` credential | per request |
 
-`<leader>ae` (inline edit) runs on the `edit` role, not the agent: avante needs a plain
-HTTP model that answers with a `<code>` block, and ACP agents answer as agents. Local
-ollama by default; `edit = { backend = "opencode-go", model = "glm-5.3-flash" }` moves it.
-Any other role takes the same shape, so one file can also pin `cli`.
-
-`<leader>aq` drops the quickfix list into the agent's prompt as `- path:line:col [E] text`
-lines, unsent, with the files attached to the sidebar's context; `<leader>aQ` does the
-location list. Finish the instruction and submit.
-`<leader>aA` makes the same choice for one session; `:AiStatus` shows what won.
-Sidekick's terminals live under `<leader>k` (`kk` toggle, `kc` claude, `ki` aider, `ko`
-opencode, `kP` pi, `kt`/`kv`/`kf`/`kq`/`kg` send this/selection/file/quickfix/diagnostics);
-its claude tool reads the `cli` role.
+Inline edit runs on the `edit` role, not the agent: avante needs a plain HTTP
+model that answers with a `<code>` block, and ACP agents answer as agents. Local
+ollama by default; `edit = { backend = "opencode-go", model = "glm-5.3-flash" }`
+moves it. Any other role takes the same shape, so one file can also pin `cli` —
+and that one is live today.

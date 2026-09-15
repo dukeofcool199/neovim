@@ -11,16 +11,17 @@
 # capability (true fill-in-the-middle); "instruct" is derived -- a base model
 # reports nothing beyond completion/insert and will not follow an instruction.
 #
-#   agent       <leader>a*  avante's agentic sidebar; backend chosen per project
-#   edit        <leader>ae  avante inline rewrite, on an HTTP model (ollama by
-#                           default): an ACP agent cannot serve it
-#   cli         <leader>k*  sidekick's terminal agents; `claude` runs this model
+#   cli         <leader>a*  sidekick's terminal agents; `claude` runs this model
 #
-# Set aside while avante is the whole story -- still configured here, their
-# plugin files (codecompanion.nix, minuet.nix) just aren't imported:
-#   ask         talk about code in a codecompanion chat buffer
-#   completion  minuet ghost text / cmp candidates as you type
-#   next-edit   minuet duet: predict the edit you are about to make
+# Set aside -- still configured here, their plugin files just aren't imported:
+#   agent       avante's agentic sidebar (avante.nix)
+#   edit        avante inline rewrite (avante.nix)
+#   ask         a codecompanion chat buffer (codecompanion.nix)
+#   completion  minuet ghost text / cmp candidates as you type (minuet.nix)
+#   next-edit   minuet duet: predict the edit you are about to make (minuet.nix)
+#
+# 99 (<leader>9) is outside this registry: it tracks its own edit and search
+# models in _G.ninetynine_models, set per project from .nvim.lua.
 #
 {
   # kind = "key"    -> env var first, `pass` consulted only on a miss
@@ -51,8 +52,8 @@
     claude-cli = {kind = "none";};
   };
 
-  # Geometry shared by every AI side panel, so the chat buffer and the agent
-  # terminal open the same shape instead of drifting apart.
+  # Geometry shared by every AI side panel, so the agent terminal and any
+  # chat buffer open the same shape instead of drifting apart.
   ui.panel = {
     position = "left";
     width = 50;
@@ -99,10 +100,11 @@
       model = "qwen2.5-coder:3b-instruct";
       requires = ["instruct"];
     };
-    # avante applies inline edits itself from a <code> block in the reply, so
-    # the model needs no tool-calling -- it only has to follow instructions,
-    # which a base model will not. Any HTTP backend works here (opencode-go,
-    # say); an ACP agent does not, and falls back to the agent provider.
+    # Dormant with avante. avante applies inline edits itself from a <code>
+    # block in the reply, so the model needs no tool-calling -- it only has to
+    # follow instructions, which a base model will not. Any HTTP backend works
+    # here (opencode-go, say); an ACP agent does not, and falls back to the
+    # agent provider.
     edit = {
       backend = "ollama";
       endpoint = "ollama";
@@ -115,11 +117,9 @@
       backend = "opencode";
       model = "openai/gpt-5.5";
     };
-    # No default on purpose. A project names its backend (one of `agents`
-    # below) and model in .nvim.lua:
+    # Dormant with avante, and no default on purpose: a project named its
+    # backend (one of `agents` below) and model in .nvim.lua:
     #   require("ai").setup({agent = {backend = "claude-code", model = "claude-sonnet-5"}})
-    # or <leader>aA picks one for the session. Until then avante is not even
-    # set up, and <leader>aa only offers the picker.
     agent = {};
     cli = {
       command = "claude";
@@ -127,13 +127,14 @@
     };
   };
 
-  # What the agent role can point at. ACP backends run a CLI that holds its
-  # own credentials, and the model reaches them through the environment they
-  # are spawned with (claude reads ANTHROPIC_MODEL, opencode reads
-  # OPENCODE_CONFIG_CONTENT). An HTTP backend names an endpoint above and
-  # carries that endpoint's credential. `models` is what the picker offers
-  # an ACP agent: a list when the agent cannot enumerate them itself (claude
-  # has no models command), or a provider prefix to narrow `opencode models`.
+  # What the agent role can point at, for when avante comes back. ACP backends
+  # run a CLI that holds its own credentials, and the model reaches them
+  # through the environment they are spawned with (claude reads
+  # ANTHROPIC_MODEL, opencode reads OPENCODE_CONFIG_CONTENT). An HTTP backend
+  # names an endpoint above and carries that endpoint's credential. `models` is
+  # what the picker offers an ACP agent: a list when the agent cannot enumerate
+  # them itself (claude has no models command), or a provider prefix to narrow
+  # `opencode models`.
   agents = {
     claude-code = {
       transport = "acp";

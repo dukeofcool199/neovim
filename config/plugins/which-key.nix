@@ -6,6 +6,10 @@
       spec = [
         # Top-level leader groups
         {
+          __unkeyed-1 = "<leader>9";
+          group = "99";
+        }
+        {
           __unkeyed-1 = "<leader>a";
           group = "AI";
         }
@@ -32,10 +36,6 @@
         {
           __unkeyed-1 = "<leader>j";
           group = "Jujutsu";
-        }
-        {
-          __unkeyed-1 = "<leader>k";
-          group = "Sidekick";
         }
         {
           __unkeyed-1 = "<leader>m";

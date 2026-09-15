@@ -1,7 +1,7 @@
 # sidekick.nvim -- CLI agents in a terminal split, the whole set under
-# <leader>k: claude, aider, opencode, pi, plus sending editor context into
-# whichever is running. Avante (<leader>a) is the sidebar; this is the
-# terminal. The claude tool follows the `cli` role in config/ai/registry.nix.
+# <leader>a: claude, aider, opencode, pi, plus sending editor context into
+# whichever is running. The claude tool follows the `cli` role in
+# config/ai/registry.nix.
 {pkgs, ...}: let
   registry = import ../ai/registry.nix;
   claudeModel = registry.roles.cli.model;
@@ -92,18 +92,18 @@ in {
     };
     nv = ["n" "v"];
   in [
-    (map nv "<leader>kk" "toggle()" "Toggle CLI")
-    (map "n" "<leader>kc" "toggle({ name = 'claude', focus = true })" "Toggle Claude Code")
-    (map "n" "<leader>ki" "toggle({ name = 'aider', focus = true })" "Toggle Aider")
-    (map "n" "<leader>ko" "toggle({ name = 'opencode', focus = true })" "Toggle opencode")
-    (map "n" "<leader>kP" "toggle({ name = 'pi', focus = true })" "Toggle pi")
-    (map "n" "<leader>ks" "select()" "Select CLI tool")
-    (map "n" "<leader>kd" "close()" "Detach CLI session")
-    (map nv "<leader>kp" "prompt()" "Select prompt")
-    (map nv "<leader>kt" "send({ msg = '{this}' })" "Send this")
-    (map "v" "<leader>kv" "send({ msg = '{selection}' })" "Send selection")
-    (map "n" "<leader>kf" "send({ msg = '{file}' })" "Send file")
-    (map "n" "<leader>kq" "send({ msg = '{quickfix}' })" "Send quickfix list")
-    (map "n" "<leader>kg" "send({ msg = '{diagnostics}' })" "Send diagnostics")
+    (map nv "<leader>aa" "toggle()" "Toggle CLI")
+    (map "n" "<leader>ac" "toggle({ name = 'claude', focus = true })" "Toggle Claude Code")
+    (map "n" "<leader>ai" "toggle({ name = 'aider', focus = true })" "Toggle Aider")
+    (map "n" "<leader>ao" "toggle({ name = 'opencode', focus = true })" "Toggle opencode")
+    (map "n" "<leader>aP" "toggle({ name = 'pi', focus = true })" "Toggle pi")
+    (map "n" "<leader>as" "select()" "Select CLI tool")
+    (map "n" "<leader>ad" "close()" "Detach CLI session")
+    (map nv "<leader>ap" "prompt()" "Select prompt")
+    (map nv "<leader>at" "send({ msg = '{this}' })" "Send this")
+    (map "v" "<leader>av" "send({ msg = '{selection}' })" "Send selection")
+    (map "n" "<leader>af" "send({ msg = '{file}' })" "Send file")
+    (map "n" "<leader>aq" "send({ msg = '{quickfix}' })" "Send quickfix list")
+    (map "n" "<leader>ag" "send({ msg = '{diagnostics}' })" "Send diagnostics")
   ];
 }

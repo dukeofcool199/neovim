@@ -26,7 +26,7 @@
     ./extra-plugins.nix
     ./jj.nix
     ./octo.nix
-    ./avante.nix
+    ./99.nix
     ./sidekick.nix
     ./dressing.nix
     ./render-markdown.nix
