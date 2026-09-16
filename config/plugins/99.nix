@@ -1,4 +1,12 @@
+# 99 -- selection rewrite and project search driven by a CLI agent. Both its
+# contexts are ordinary registry roles (`edit`, `search` in config/ai/registry.nix),
+# so :AiModel, :AiPick, :AiStatus and a project's .nvim.lua reach them the same
+# way they reach every other role.
 {pkgs, ...}: let
+  registry = import ../ai/registry.nix;
+  editRole = registry.roles.edit;
+  editProvider = registry.agents.${editRole.backend}.provider;
+
   plugin-99 = pkgs.vimUtils.buildVimPlugin {
     name = "99";
     src = pkgs.fetchFromGitHub {
@@ -23,29 +31,11 @@ in {
     local cwd = vim.uv.cwd()
     local basename = vim.fs.basename(cwd)
 
-    -- Two models are tracked independently at runtime, one per context:
-    --   * edit   -> visual replacement. gpt-5.6-fast: low latency -> snappy
-    --               edits / quick agent loops.
-    --   * search -> project search. gpt-5.6-pro: strongest reasoning -> synthesis
-    --               and multi-step analysis.
-    -- Both resolve through opencode (ChatGPT Pro auth); no provider injection.
-    -- Each is chosen live from `opencode models` via <leader>9m / <leader>9M and
-    -- both are shown in the statusline. These are the startup defaults:
-    _G.ninetynine_models = _G.ninetynine_models or {
-      edit = "openai/gpt-5.5",
-      search = "openai/gpt-5.5",
-    }
-
-    local function refresh_lualine()
-      local ok, lualine = pcall(require, "lualine")
-      if ok then
-        lualine.refresh()
-      end
-    end
-
+    -- A seed only: every op resolves its role again through ninetynine_run,
+    -- so this is what 99 holds before the first keypress.
     _99.setup({
-      provider = _99.Providers.OpenCodeProvider,
-      model = _G.ninetynine_models.edit,
+      provider = _99.Providers.${editProvider},
+      model = "${editRole.model}",
       logger = {
         level = _99.DEBUG,
         path = "/tmp/" .. basename .. ".99.debug",
@@ -76,181 +66,26 @@ in {
       },
     })
 
-    -- List models opencode can reach (one `provider/model` id per line).
-    local function opencode_models(cb)
-      vim.system({ "opencode", "models" }, { text = true }, function(obj)
-        vim.schedule(function()
-          if obj.code ~= 0 then
-            vim.notify("99: `opencode models` failed", vim.log.levels.ERROR)
-            return
-          end
-          cb(vim.split(obj.stdout, "\n", { trimempty = true }))
-        end)
-      end)
-    end
-
-    -- Assign a freshly picked model id (full `provider/model`) to a context.
-    local function set_context_model(ctx, id)
-      _G.ninetynine_models[ctx] = id
-      refresh_lualine()
-      vim.notify("99: " .. ctx .. " model -> " .. id)
-    end
-
-    -- Picker (telescope if present, else vim.ui.select) to set a context model.
-    -- ctx is "edit" or "search".
-    _G.ninetynine_pick_model = function(ctx)
-      opencode_models(function(models)
-        if #models == 0 then
-          vim.notify("99: no opencode models available", vim.log.levels.WARN)
-          return
-        end
-        local title = "99: select " .. ctx .. " model"
-        local ok, pickers = pcall(require, "telescope.pickers")
-        if not ok then
-          vim.ui.select(models, { prompt = title }, function(choice)
-            if choice then
-              set_context_model(ctx, choice)
-            end
-          end)
-          return
-        end
-        local finders = require("telescope.finders")
-        local conf = require("telescope.config").values
-        local actions = require("telescope.actions")
-        local action_state = require("telescope.actions.state")
-        pickers
-          .new({}, {
-            prompt_title = title,
-            finder = finders.new_table({ results = models }),
-            sorter = conf.generic_sorter({}),
-            attach_mappings = function(bufnr)
-              actions.select_default:replace(function()
-                actions.close(bufnr)
-                local sel = action_state.get_selected_entry()
-                if sel then
-                  set_context_model(ctx, sel[1])
-                end
-              end)
-              return true
-            end,
-          })
-          :find()
-      end)
-    end
-
-    -- Run a 99 op under its context's model. set_model snapshots synchronously
-    -- into the request at creation, so this is race-free with the async prompt.
-    _G.ninetynine_run = function(ctx, fn)
-      _99.set_model(_G.ninetynine_models[ctx])
+    -- Run a 99 op under its role's agent and model. Both are snapshotted
+    -- synchronously into the request at creation, so this is race-free with
+    -- the async prompt that follows.
+    _G.ninetynine_run = function(role, fn)
+      local r = require("ai").role(role)
+      if not r then
+        return vim.notify("99: no '" .. role .. "' role", vim.log.levels.WARN)
+      end
+      local provider = r.provider and _99.Providers[r.provider]
+      if not provider then
+        return vim.notify(
+          ("99: %s is on '%s', which is not a CLI agent 99 can drive"):format(role, tostring(r.backend)),
+          vim.log.levels.WARN
+        )
+      end
+      -- set_provider resets the model to that provider's own default, so the
+      -- order here is forced.
+      _99.set_provider(provider)
+      _99.set_model(r.model)
       require("99")[fn]()
-    end
-
-    -- Project-local API. A requireable module so editor-native exrc files
-    -- (.nvim.lua in a project root, enabled via opts.exrc) can set models per
-    -- project. exrc runs after this config, so the module is ready by then:
-    --
-    --   -- .nvim.lua
-    --   require("ninetynine").set_models({
-    --     edit   = "openai/gpt-5.6-fast",
-    --     search = "openai/gpt-5.6-pro",
-    --   })
-    --
-    -- Mutates the single source of truth (_G.ninetynine_models) that the
-    -- keymaps and picker already use. Validation warns rather than errors so a
-    -- typo in a project file never breaks startup. Note: .nvim.lua is executable
-    -- Lua and must be :trust-ed on first open.
-    package.preload["ninetynine"] = function()
-      local M = {}
-      local VALID = { edit = true, search = true }
-
-      local function set(ctx, id)
-        if type(id) ~= "string" or id == "" then
-          vim.notify(
-            "ninetynine: " .. ctx .. " model must be a non-empty string",
-            vim.log.levels.WARN
-          )
-          return
-        end
-        if not id:find("/", 1, true) then
-          vim.notify(
-            "ninetynine: '" .. id .. "' is not a 'provider/model' id",
-            vim.log.levels.WARN
-          )
-        end
-        _G.ninetynine_models[ctx] = id
-        refresh_lualine()
-      end
-
-      --- @param cfg { edit?: string, search?: string }
-      function M.set_models(cfg)
-        if type(cfg) ~= "table" then
-          vim.notify(
-            "ninetynine.set_models: expected a table",
-            vim.log.levels.ERROR
-          )
-          return
-        end
-        for k in pairs(cfg) do
-          if not VALID[k] then
-            vim.notify(
-              "ninetynine.set_models: unknown key '"
-                .. tostring(k)
-                .. "' (want edit/search)",
-              vim.log.levels.WARN
-            )
-          end
-        end
-        if cfg.edit ~= nil then
-          set("edit", cfg.edit)
-        end
-        if cfg.search ~= nil then
-          set("search", cfg.search)
-        end
-        return M.get_models()
-      end
-
-      function M.set_edit(id)
-        set("edit", id)
-        return M.get_models()
-      end
-
-      function M.set_search(id)
-        set("search", id)
-        return M.get_models()
-      end
-
-      function M.get_models()
-        return vim.deepcopy(_G.ninetynine_models)
-      end
-
-      function M.pick(ctx)
-        _G.ninetynine_pick_model(ctx or "edit")
-      end
-
-      return M
-    end
-
-    -- Statusline helper: show both context models (short form, provider stripped)
-    _G.ninetynine_lualine_model = function()
-      local m = _G.ninetynine_models or {}
-      local function short(x)
-        return (x or "?"):gsub("^.-/", "")
-      end
-      return string.format("󰚩 e:%s  s:%s", short(m.edit), short(m.search))
-    end
-
-    local orig_set_model = _99.set_model
-    _99.set_model = function(model)
-      local res = orig_set_model(model)
-      refresh_lualine()
-      return res
-    end
-
-    local orig_set_provider = _99.set_provider
-    _99.set_provider = function(provider)
-      local res = orig_set_provider(provider)
-      refresh_lualine()
-      return res
     end
   '';
 
@@ -264,7 +99,7 @@ in {
         end
       '';
       options = {
-        desc = "99: visual replacement (edit model)";
+        desc = "99: visual replacement (edit role)";
         silent = true;
         noremap = true;
       };
@@ -278,7 +113,7 @@ in {
         end
       '';
       options = {
-        desc = "99: search (search model)";
+        desc = "99: search (search role)";
         silent = true;
         noremap = true;
       };
@@ -330,7 +165,7 @@ in {
       key = "<leader>9m";
       action.__raw = ''
         function()
-          _G.ninetynine_pick_model("edit")
+          require("ai").pick("edit")
         end
       '';
       options = {
@@ -344,7 +179,7 @@ in {
       key = "<leader>9M";
       action.__raw = ''
         function()
-          _G.ninetynine_pick_model("search")
+          require("ai").pick("search")
         end
       '';
       options = {
@@ -358,11 +193,13 @@ in {
       key = "<leader>9p";
       action.__raw = ''
         function()
-          require("99.extensions.telescope").select_provider()
+          require("ai").pick_backend("edit", "cli", function()
+            require("ai").pick("edit")
+          end)
         end
       '';
       options = {
-        desc = "99: select provider (telescope)";
+        desc = "99: set edit agent, then its model";
         silent = true;
         noremap = true;
       };

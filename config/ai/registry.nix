@@ -3,25 +3,24 @@
 # A plain attrset, not a module: consumers `import` it at eval time so the same
 # data shapes both the Nix-side plugin options and the baked `ai` Lua module.
 #
-# Role names match the verbs on the <leader>a keymaps, so what you press and
-# what you configure line up:
+# Role names match the verbs on the keymaps, so what you press and what you
+# configure line up:
 #
 # `requires` lists what the model must be able to do, checked against
 # ollama's own /api/show capabilities by :AiDoctor. "insert" is a real ollama
 # capability (true fill-in-the-middle); "instruct" is derived -- a base model
 # reports nothing beyond completion/insert and will not follow an instruction.
+# Only an ollama role can be checked, so only an ollama role carries it.
 #
+#   edit        <leader>9v  99 rewrites the selection through a CLI agent
+#   search      <leader>9s  99 searches the project through a CLI agent
 #   cli         <leader>a*  sidekick's terminal agents; `claude` runs this model
 #
 # Set aside -- still configured here, their plugin files just aren't imported:
 #   agent       avante's agentic sidebar (avante.nix)
-#   edit        avante inline rewrite (avante.nix)
 #   ask         a codecompanion chat buffer (codecompanion.nix)
 #   completion  minuet ghost text / cmp candidates as you type (minuet.nix)
 #   next-edit   minuet duet: predict the edit you are about to make (minuet.nix)
-#
-# 99 (<leader>9) is outside this registry: it tracks its own edit and search
-# models in _G.ninetynine_models, set per project from .nvim.lua.
 #
 {
   # kind = "key"    -> env var first, `pass` consulted only on a miss
@@ -109,16 +108,16 @@
       model = "qwen2.5-coder:3b-instruct";
       requires = ["instruct"];
     };
-    # Dormant with avante. avante applies inline edits itself from a <code>
-    # block in the reply, so the model needs no tool-calling -- it only has to
-    # follow instructions, which a base model will not. Any HTTP backend works
-    # here (opencode-go, say); an ACP agent does not, and falls back to the
-    # agent provider.
+    # 99's two roles. Both drive a CLI agent, so the backend must be one of
+    # `agents` below that names a `provider`. opencode is the default on both
+    # because it is the only one 99 fences (see `provider`).
     edit = {
-      backend = "ollama";
-      endpoint = "ollama";
-      model = "qwen2.5-coder:7b-instruct";
-      requires = ["instruct"];
+      backend = "opencode";
+      model = "openai/gpt-5.5";
+    };
+    search = {
+      backend = "opencode";
+      model = "openai/gpt-5.5";
     };
     # Reached over ACP: the opencode binary supplies its own credentials, so
     # no key is needed and no local compute is spent.
@@ -136,20 +135,33 @@
     };
   };
 
-  # What the agent role can point at, for when avante comes back. ACP backends
-  # run a CLI that holds its own credentials, and the model reaches them
-  # through the environment they are spawned with (claude reads
-  # ANTHROPIC_MODEL, opencode reads OPENCODE_CONFIG_CONTENT). An HTTP backend
-  # names an endpoint above and carries that endpoint's credential. `models` is
-  # what the picker offers an ACP agent: a list when the agent cannot enumerate
+  # The CLI agents a role can be pointed at. Each holds its own credentials,
+  # and the model reaches it through the environment it is spawned with (claude
+  # reads ANTHROPIC_MODEL, opencode reads OPENCODE_CONFIG_CONTENT). An HTTP
+  # backend names an endpoint above and carries that endpoint's credential.
+  #
+  # `models` is what the picker offers: a list when the agent cannot enumerate
   # them itself (claude has no models command), or a provider prefix to narrow
-  # `opencode models`.
+  # `opencode models`. The claude list here is why the picker is worth routing
+  # through `ai.models` -- 99 ships its own, and it is a generation stale.
+  #
+  # `provider` names the key in `_99.Providers`, and its absence means 99
+  # cannot reach this agent. The two differ in more than argv: opencode is
+  # handed a permission set denying every edit outside 99's tmp file plus bash
+  # and task, while claude-code runs --dangerously-skip-permissions with no
+  # fence at all. Point `edit` at claude-code only when that is what you want.
   agents = {
     claude-code = {
       transport = "acp";
+      command = "claude";
+      provider = "ClaudeCodeProvider";
       models = ["claude-sonnet-5" "claude-opus-5" "claude-fable-5-1" "claude-haiku-4-5-20251001"];
     };
-    opencode = {transport = "acp";};
+    opencode = {
+      transport = "acp";
+      command = "opencode";
+      provider = "OpenCodeProvider";
+    };
     opencode-go = {
       transport = "http";
       endpoint = "opencode-go";
@@ -157,8 +169,9 @@
   };
 
   # Opt-in overlay chosen by NVIM_AI_TIER. Unset var = the defaults above.
+  # Only the ollama roles appear: a tier is about local VRAM, and a role that
+  # shells out to an agent spends none.
   tiers.big = {
     completion.model = "qwen2.5-coder:3b-base";
-    edit.model = "devstral:24b";
   };
 }

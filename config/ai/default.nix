@@ -201,6 +201,7 @@ in {
           if agent then
             r.transport = agent.transport
             r.endpoint = agent.endpoint
+            r.provider = agent.provider
           elseif r.backend and registry.endpoints[r.backend] then
             r.endpoint = r.backend
           end
@@ -219,6 +220,7 @@ in {
           completion = "cmp",
           ["next-edit"] = "next",
           edit = "edit",
+          search = "search",
           ask = "ask",
           agent = "agent",
           cli = "cli",
@@ -263,7 +265,19 @@ in {
           return names
         end
 
-        --- HTTP endpoints, which is what a plain completion role (edit) can use.
+        --- Backends 99 can drive, which is the subset naming a _99 provider.
+        function M.cli_backends()
+          local names = {}
+          for name, agent in pairs(registry.agents or {}) do
+            if agent.provider then
+              table.insert(names, name)
+            end
+          end
+          table.sort(names)
+          return names
+        end
+
+        --- HTTP endpoints, which is what a plain completion role can use.
         function M.http_backends()
           local names = vim.tbl_keys(registry.endpoints)
           table.sort(names)
@@ -540,7 +554,7 @@ in {
 
         local function select_from(list, prompt, on_choice)
           if #list == 0 then
-            vim.notify("ai: no models available", vim.log.levels.WARN)
+            vim.notify("ai: nothing to choose from", vim.log.levels.WARN)
             return
           end
           local ok, pickers = pcall(require, "telescope.pickers")
@@ -607,6 +621,21 @@ in {
           end)
         end
 
+        --- Pick a backend for `name`. `only` narrows the list to one class:
+        --- "cli" for a role a CLI agent has to serve, nil for every agent.
+        --- The model is not carried across -- the new backend's namespace is
+        --- its own -- so the role keeps whatever it had until you pick again.
+        function M.pick_backend(name, only, cb)
+          local list = only == "cli" and M.cli_backends() or M.backends()
+          select_from(list, "ai: backend for " .. name, function(choice)
+            M.set(name, {backend = choice})
+            vim.notify("ai: " .. name .. " backend -> " .. choice)
+            if cb then
+              cb(choice)
+            end
+          end)
+        end
+
         return M
       end
 
@@ -616,7 +645,7 @@ in {
       -- Segments are separate lualine components (see lualine.nix) so each
       -- gets its own colour without embedding highlight escapes in a string.
       --- Width-ordered: the least useful segment is dropped first.
-      local PRIORITY = {"edit", "ask", "completion", "next-edit", "agent", "cli"}
+      local PRIORITY = {"edit", "search", "ask", "completion", "next-edit", "agent", "cli"}
 
       _G.ai_lualine_role = function(name)
         local ok, ai = pcall(require, "ai")

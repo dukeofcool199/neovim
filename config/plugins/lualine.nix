@@ -1,6 +1,6 @@
 {...}: let
   registry = import ../ai/registry.nix;
-  aiRoles = ["edit" "agent" "cli"];
+  aiRoles = ["edit" "search" "agent" "cli"];
 in {
   plugins.lualine = {
     enable = true;
@@ -92,11 +92,6 @@ in {
                 fg = "#b8bb26";
                 gui = "bold";
               };
-            }
-            {
-              __unkeyed-1.__raw = "function() return _G.ninetynine_lualine_model() end";
-              cond.__raw = "function() return _G.ninetynine_lualine_model ~= nil end";
-              color = {fg = "#83a598";};
             }
           ];
         lualine_y = ["filetype" "progress"];

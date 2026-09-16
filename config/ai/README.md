@@ -23,7 +23,7 @@ Any `${name.field}` placeholder loads `name.lua` from the same directory.
 
 ## Writing a prompt a small model can follow
 
-The default `edit` model is `qwen2.5-coder:3b-instruct`, and inline replies have to arrive
+These tasks ran on a local `qwen2.5-coder:3b-instruct`, and inline replies have to arrive
 as a JSON object. Measured on that model, against samples in six languages:
 
 - **Never list conventions for more than one language.** Shown eight, it annotates
@@ -43,7 +43,7 @@ as a JSON object. Measured on that model, against samples in six languages:
   emitted `function M.area(w: number)`, which is not Lua. Both were cut. Document and Fix
   survived, and the chat tasks run on the `ask` model where none of this applies.
 
-`<leader>aT` raises the `edit` model first, for the tasks a 3B model cannot hold.
+`<leader>aT` raised the model first, for the tasks a 3B model cannot hold.
 
 ## What is bound today
 
@@ -60,28 +60,41 @@ role's model.
 | `ay` | yank context (prompt-yank) |
 | `am` | models and credentials (`:AiPick`, `:AiStatus`, `:AiDoctor`, `:AiAuth`, `:AiReset`) |
 
-99 keeps its own namespace under `<leader>9` and its own two models, which it
-tracks outside this registry:
+99 keeps its namespace under `<leader>9`, but its two models are the `edit` and
+`search` roles, so everything that reaches a role reaches 99:
 
 | key | does |
 |---|---|
-| `9v` `9s` | visual replacement (edit model), project search (search model) |
-| `9m` `9M` `9p` | pick the edit model, the search model, the provider |
+| `9v` `9s` | rewrite the selection (`edit`), search the project (`search`) |
+| `9m` `9M` | pick the model for `edit`, for `search` |
+| `9p` | pick the agent behind `edit`, then its model |
 | `9x` `9o` `9l` | stop all requests, open the last interaction, view logs |
 
 ```lua
 -- .nvim.lua
-require("ninetynine").set_models({
-  edit   = "openai/gpt-5.6-fast",
-  search = "openai/gpt-5.6-pro",
+require("ai").setup({
+  edit   = {model = "openai/gpt-5.6-fast"},
+  search = {backend = "claude-code", model = "claude-opus-5"},
 })
 ```
+
+`require("ninetynine")` is gone; a project file that still calls it will error.
+
+Both roles must sit on an agent that names a `provider` in the registry —
+`opencode` or `claude-code`. They are not equivalent: opencode is spawned with a
+permission set denying every edit outside 99's tmp file, plus bash and task,
+while claude-code runs `--dangerously-skip-permissions` with no fence. opencode
+is the default on both roles for that reason.
+
+`9m` on a claude-code backend offers the registry's model list rather than 99's
+own, which is a generation stale — the claude CLI cannot enumerate models, so
+someone has to hold the list and the registry already does.
 
 ## Choosing the agent per project (avante, dormant)
 
 avante is not imported right now — `config/plugins/avante.nix` is on disk but
-out of `config/plugins/default.nix`, and the `agent` and `edit` roles go with
-it. Restoring the import brings back everything below.
+out of `config/plugins/default.nix`, and the `agent` role goes with it.
+Restoring the import brings back everything below.
 
 avante has no default backend: on a fresh project it offers a picker instead.
 The durable answer lives in the project's `.nvim.lua` (Neovim's `exrc`, trusted
@@ -99,8 +112,9 @@ require("ai").setup({
 | `opencode` | ACP, `opencode acp` | `OPENCODE_CONFIG_CONTENT` in the agent's environment |
 | `opencode-go` | HTTP, OpenCode Go with the `opencode-go` credential | per request |
 
-Inline edit runs on the `edit` role, not the agent: avante needs a plain HTTP
-model that answers with a `<code>` block, and ACP agents answer as agents. Local
-ollama by default; `edit = { backend = "opencode-go", model = "glm-5.3-flash" }`
-moves it. Any other role takes the same shape, so one file can also pin `cli` —
-and that one is live today.
+avante's inline edit cannot share the `edit` role any more: it needs a plain
+HTTP model that answers with a `<code>` block, and `edit` now drives a CLI agent
+for 99. Restoring avante means either pointing `edit` back at an HTTP backend
+(`{ backend = "opencode-go", model = "glm-5.3-flash" }`) and giving 99 a role of
+its own, or giving avante one. Any role takes the same `.nvim.lua` shape, so one
+file can also pin `cli` — and that one is live today.
