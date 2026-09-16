@@ -74,6 +74,10 @@
         enable = true;
       };
 
+      kotlin_language_server = {
+        enable = true;
+      };
+
       # Nix
       nixd = {
         enable = true;
