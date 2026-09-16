@@ -169,7 +169,7 @@ in {
         end
       '';
       options = {
-        desc = "99: set edit model";
+        desc = "99: set edit agent and model";
         silent = true;
         noremap = true;
       };
@@ -183,23 +183,7 @@ in {
         end
       '';
       options = {
-        desc = "99: set search model";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>9p";
-      action.__raw = ''
-        function()
-          require("ai").pick_backend("edit", "cli", function()
-            require("ai").pick("edit")
-          end)
-        end
-      '';
-      options = {
-        desc = "99: set edit agent, then its model";
+        desc = "99: set search agent and model";
         silent = true;
         noremap = true;
       };

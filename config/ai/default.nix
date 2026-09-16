@@ -7,11 +7,23 @@
 # Emitted into extraConfigLuaPre because nixvim assembles
 # Pre -> Vim -> Lua -> Post and plugin setup() calls land in the Lua region;
 # a preload registered there would come too late for eager consumers.
-{...}: let
+{pkgs, ...}: let
   registry = import ./registry.nix;
   registryJson = builtins.toJSON registry;
+
+  # `:help ai-registry`. A doc-only plugin so buildVimPlugin's helptag hook
+  # generates doc/tags; a loose file in the config dir gets no tags.
+  ai-doc = pkgs.vimUtils.buildVimPlugin {
+    name = "ai-doc";
+    src = pkgs.runCommandLocal "ai-doc-src" {} ''
+      mkdir -p $out/doc
+      cp ${./ai.txt} $out/doc/ai.txt
+    '';
+  };
 in {
   imports = [./actions.nix ./progress.nix ./cli.nix];
+
+  extraPlugins = [ai-doc];
 
   extraConfigLuaPre = ''
     do
@@ -398,6 +410,82 @@ in {
           return out
         end
 
+        --- The agent a role names by binary rather than by backend. sidekick's
+        --- `cli` role is spelled that way: it runs `claude`, which is the
+        --- claude-code agent under another name.
+        local function agent_for_command(command)
+          for name, agent in pairs(registry.agents or {}) do
+            if command and agent.command == command then
+              return name
+            end
+          end
+          return nil
+        end
+
+        --- Models one CLI agent can reach, cached under the agent's name.
+        --- An agent that cannot enumerate its own (claude) carries the list in
+        --- the registry; one bound to a single provider carries a prefix to
+        --- narrow `opencode models` with, and wants bare names back.
+        local function models_for_agent(backend, cb)
+          local agent = backend and registry.agents and registry.agents[backend] or nil
+          if not agent then
+            return cb({})
+          end
+          if model_cache[backend] then
+            return cb(model_cache[backend])
+          end
+          local function done(list)
+            model_cache[backend] = list
+            cb(list)
+          end
+          if type(agent.models) == "table" then
+            return done(vim.deepcopy(agent.models))
+          end
+          local prefix = agent.models and (agent.models .. "/") or nil
+          vim.system({"opencode", "models"}, {text = true}, function(obj)
+            vim.schedule(function()
+              local list = vim.split(obj.stdout or "", "\n", {trimempty = true})
+              if prefix then
+                list = vim.tbl_map(function(m)
+                  return m:sub(#prefix + 1)
+                end, vim.tbl_filter(function(m)
+                  return m:sub(1, #prefix) == prefix
+                end, list))
+              end
+              done(list)
+            end)
+          end)
+        end
+
+        --- Every model reachable from any CLI agent, as {backend, model} rows.
+        --- One menu instead of two: a role on an agent is choosing a tool and a
+        --- model at once, and splitting them hides half the list behind a
+        --- command you have to already know about.
+        function M.agent_models(cb)
+          local backends = M.cli_backends()
+          local rows, pending = {}, #backends
+          if pending == 0 then
+            return cb({})
+          end
+          for _, backend in ipairs(backends) do
+            models_for_agent(backend, function(list)
+              for _, model in ipairs(list) do
+                table.insert(rows, {backend = backend, model = model})
+              end
+              pending = pending - 1
+              if pending == 0 then
+                table.sort(rows, function(a, b)
+                  if a.backend ~= b.backend then
+                    return a.backend < b.backend
+                  end
+                  return a.model < b.model
+                end)
+                cb(rows)
+              end
+            end)
+          end
+        end
+
         --- Models a role can reach. HTTP endpoints serve /v1/models; ACP and
         --- CLI roles are enumerated by `opencode models`.
         function M.models(name, cb)
@@ -442,25 +530,7 @@ in {
               end)
             end)
           else
-            local agent = r.backend and registry.agents and registry.agents[r.backend] or nil
-            if agent and type(agent.models) == "table" then
-              return done(vim.deepcopy(agent.models))
-            end
-            -- An ACP agent bound to one provider wants bare model names.
-            local prefix = agent and agent.models and (agent.models .. "/") or nil
-            vim.system({"opencode", "models"}, {text = true}, function(obj)
-              vim.schedule(function()
-                local list = vim.split(obj.stdout or "", "\n", {trimempty = true})
-                if prefix then
-                  list = vim.tbl_map(function(m)
-                    return m:sub(#prefix + 1)
-                  end, vim.tbl_filter(function(m)
-                    return m:sub(1, #prefix) == prefix
-                  end, list))
-                end
-                done(list)
-              end)
-            end)
+            models_for_agent(r.backend or agent_for_command(r.command), done)
           end
         end
 
@@ -589,6 +659,40 @@ in {
             :find()
         end
 
+        --- Pick a model for a role sitting on a CLI agent. The list spans
+        --- every agent and each row carries its own, so choosing a claude
+        --- model moves the role onto claude in the same keypress -- there is
+        --- no order to remember and no second menu.
+        local function pick_agent_model(name, cb)
+          M.agent_models(function(rows)
+            if #rows == 0 then
+              vim.notify("ai: no agent models available", vim.log.levels.WARN)
+              if cb then
+                cb(nil)
+              end
+              return
+            end
+            local width = 0
+            for _, row in ipairs(rows) do
+              width = math.max(width, #row.backend)
+            end
+            local labels, by_label = {}, {}
+            for _, row in ipairs(rows) do
+              local label = string.format("%-" .. width .. "s  %s", row.backend, row.model)
+              table.insert(labels, label)
+              by_label[label] = row
+            end
+            select_from(labels, "ai: agent and model for " .. name, function(choice)
+              local row = by_label[choice]
+              M.set(name, {backend = row.backend, model = row.model})
+              vim.notify(("ai: %s -> %s %s"):format(name, row.backend, row.model))
+              if cb then
+                cb(row.model)
+              end
+            end)
+          end)
+        end
+
         --- Pick a model for `name`, then run `cb` if given. With nothing to
         --- choose from the role keeps its model and `cb` still runs, so a
         --- backend that cannot list models is not a dead end.
@@ -598,6 +702,10 @@ in {
               M.pick(role, cb)
             end)
             return
+          end
+          local role = M.role(name)
+          if role and role.provider then
+            return pick_agent_model(name, cb)
           end
           M.models(name, function(list)
             if #list == 0 then
@@ -618,21 +726,6 @@ in {
                 cb(choice)
               end
             end)
-          end)
-        end
-
-        --- Pick a backend for `name`. `only` narrows the list to one class:
-        --- "cli" for a role a CLI agent has to serve, nil for every agent.
-        --- The model is not carried across -- the new backend's namespace is
-        --- its own -- so the role keeps whatever it had until you pick again.
-        function M.pick_backend(name, only, cb)
-          local list = only == "cli" and M.cli_backends() or M.backends()
-          select_from(list, "ai: backend for " .. name, function(choice)
-            M.set(name, {backend = choice})
-            vim.notify("ai: " .. name .. " backend -> " .. choice)
-            if cb then
-              cb(choice)
-            end
           end)
         end
 

@@ -1,0 +1,255 @@
+*ai.txt*	Role -> model bindings for every AI tool in this config
+
+==============================================================================
+CONTENTS                                                          *ai-contents*
+
+	1. Concept ............................... |ai-concept|
+	2. Roles ................................. |ai-roles|
+	3. Project configuration ................. |ai-project|
+	4. Recipes ............................... |ai-recipes|
+	5. Commands .............................. |ai-commands|
+	6. Keymaps ............................... |ai-keymaps|
+	7. Lua API ............................... |ai-api|
+	8. Troubleshooting ....................... |ai-troubleshooting|
+
+==============================================================================
+1. CONCEPT                                                         *ai-concept*
+                                                                  *ai-registry*
+
+One registry, `config/ai/registry.nix`, holds every credential, endpoint and
+role -> model binding. Plugins read it instead of carrying their own literals,
+so a model is set in one place and every consumer follows.
+
+A role is a job, not a place. Point one at a local endpoint or a hosted agent
+by setting its `backend` and `model`; there is no separate "remote" role.
+
+Four layers resolve, later winning:
+
+	registry  ->  tier  ->  project  ->  session
+
+	registry	the committed default
+	tier		$NVIM_AI_TIER, an opt-in overlay
+	project		`require("ai").setup()` from .nvim.lua
+	session		:AiModel, :AiBackend, <leader>9m
+
+|:AiStatus| names the layer each role is currently taking its value from.
+
+==============================================================================
+2. ROLES                                                             *ai-roles*
+
+	edit		<leader>9v	99 rewrites the selection
+	search		<leader>9s	99 searches the project
+	cli		<leader>a*	sidekick's terminal agents
+	ask				codecompanion chat (dormant)
+	agent				avante's sidebar (dormant)
+	completion			minuet ghost text (dormant)
+	next-edit			minuet duet (dormant)
+
+`edit` and `search` drive a CLI agent, so their backend must be one that
+names a provider 99 can load. Two do:
+
+	opencode	fenced. Spawned with a permission set denying every
+			edit outside 99's tmp file, plus bash and task.
+	claude-code	NOT fenced. Runs --dangerously-skip-permissions.
+
+opencode is the default on both roles for that reason. Choosing claude-code
+is choosing to hand an unfenced agent your tree.
+
+==============================================================================
+3. PROJECT CONFIGURATION                                           *ai-project*
+
+Per-project defaults live in `.nvim.lua` at the project root, Neovim's own
+exrc (|exrc|), which this config enables. It is executable Lua and must be
+trusted once with |:trust| on first open.
+
+exrc runs after the main config, so `require("ai")` is ready by then.
+
+Setting claude-code and a model as the default for this project: >lua
+
+	-- .nvim.lua
+	require("ai").setup({
+	  edit   = { backend = "claude-code", model = "claude-opus-5" },
+	  search = { backend = "claude-code", model = "claude-sonnet-5" },
+	})
+<
+Both fields are needed when changing agent: each agent has its own model
+namespace. opencode wants `provider/model` (`openai/gpt-5.5`), claude wants a
+bare id (`claude-opus-5`). A model from the wrong namespace fails at run time,
+not at startup.
+
+:AiStatus will then show both roles with source `project`.
+
+Unknown role names and unknown fields warn rather than error, so a typo in a
+project file never breaks startup.
+
+==============================================================================
+4. RECIPES                                                         *ai-recipes*
+
+Claude for rewrites, opencode for search — the common split, since search
+reads widely and opencode is the fenced one: >lua
+
+	require("ai").setup({
+	  edit   = { backend = "claude-code", model = "claude-opus-5" },
+	  search = { backend = "opencode",    model = "openai/gpt-5.5" },
+	})
+<
+Only change the model, keeping the agent the role already has: >lua
+
+	require("ai").setup({
+	  edit = { model = "openai/gpt-5.6-fast" },
+	})
+<
+Pin sidekick's terminal claude for this project too. `cli` names its tool by
+binary rather than backend, so it takes a bare model: >lua
+
+	require("ai").setup({
+	  cli = { model = "claude-opus-5" },
+	})
+<
+A cheap model for a throwaway repo: >lua
+
+	require("ai").setup({
+	  edit   = { backend = "claude-code", model = "claude-haiku-4-5-20251001" },
+	  search = { backend = "claude-code", model = "claude-haiku-4-5-20251001" },
+	})
+<
+Everything on claude, one table: >lua
+
+	local claude = { backend = "claude-code", model = "claude-sonnet-5" }
+	require("ai").setup({ edit = claude, search = claude })
+<
+Try an agent for this session only, leaving .nvim.lua alone — press
+<leader>9m and pick a `claude-code` row, or: >vim
+
+	:AiBackend edit claude-code
+	:AiModel edit claude-opus-5
+<
+|:AiReset| drops session and project layers and returns to the registry.
+
+==============================================================================
+5. COMMANDS                                                       *ai-commands*
+
+						*:AiStatus*
+:AiStatus		Every role: model, endpoint, backend, auth, and which
+			layer supplied it. Start here.
+
+						*:AiModel*
+:AiModel {role} {model}
+			Set a role's model for this session. Completes role
+			names, then that role's models.
+
+						*:AiBackend*
+:AiBackend {role} {backend}
+			Move a role to another backend, leaving its model
+			alone. Use when you want the agent changed but not
+			the model; <leader>9m changes both together.
+
+						*:AiPick*
+:AiPick [{role}]	Telescope picker. Without a role, pick the role first.
+
+						*:AiReset*
+:AiReset [{role}]	Drop session and project overrides. Without a role,
+			reset every role.
+
+						*:AiDoctor*
+:AiDoctor		Check each ollama role's model against the
+			capabilities ollama reports for it.
+
+						*:AiAuth*
+:AiAuth [{name}]	Credential status, never key material. With ! it
+			probes `pass` and clears the cache.
+
+						*:AiTier*
+:AiTier [{name}]	Switch the $NVIM_AI_TIER overlay at run time. No
+			argument, or `small`, returns to the defaults.
+
+==============================================================================
+6. KEYMAPS                                                         *ai-keymaps*
+
+99, under <leader>9: >
+
+	9v	rewrite the selection (visual mode, `edit` role)
+	9s	search the project (`search` role)
+	9m	pick the agent and model for `edit`
+	9M	pick the agent and model for `search`
+	9x	stop all requests
+	9o	open the last interaction
+	9l	view logs
+<
+9m and 9M list every model across every agent, each row naming its own, so
+picking a claude row moves the role onto claude in one keypress: >
+
+	claude-code  claude-opus-5
+	claude-code  claude-sonnet-5
+	opencode     openai/gpt-5.5
+	opencode     openai/gpt-5.6-fast
+<
+sidekick's terminal agents, under <leader>a, run the `cli` role. <C-g>
+toggles the overlay. See |ai-roles|.
+
+==============================================================================
+7. LUA API                                                             *ai-api*
+
+						*ai.setup()*
+require("ai").setup({roles})
+			Apply project overrides. The .nvim.lua entry point.
+			Returns |ai.status()|.
+
+						*ai.set()*
+require("ai").set({role}, {spec} [, {layer}])
+			Override one role. {spec} may be a bare model string.
+			{layer} is "session" (default) or "project".
+
+						*ai.role()*
+require("ai").role({name})
+			The fully resolved role: model, backend, endpoint,
+			url, provider, and `source`. Returns nil if unknown.
+
+						*ai.status()*
+require("ai").status()
+			One row per role, as |:AiStatus| prints.
+
+						*ai.pick()*
+require("ai").pick({name} [, {cb}])
+			Raise the picker for a role. A role on a CLI agent
+			gets the flat agent-qualified list.
+
+						*ai.agent_models()*
+require("ai").agent_models({cb})
+			Every model across every CLI agent, as
+			{backend=, model=} rows.
+
+						*ai.reset()*
+require("ai").reset([{name}])
+			Drop overrides. Without a name, every role.
+
+						*ai.on_change()*
+require("ai").on_change({cb})
+			Called with (name, role) whenever a role changes.
+			How sidekick keeps its argv current.
+
+==============================================================================
+8. TROUBLESHOOTING                                           *ai-troubleshooting*
+
+A model picker shows nothing ~
+The agent could not enumerate its models. opencode needs `opencode models` to
+work on the command line; claude-code carries a list in the registry instead,
+since the claude CLI cannot enumerate its own.
+
+99 reports a role is "not a CLI agent 99 can drive" ~
+The role's backend names an HTTP endpoint (opencode-go) rather than an agent.
+Only backends with a provider work: `opencode` and `claude-code`.
+
+A 99 run fails immediately after switching agent ~
+Likely a model from the other agent's namespace. Check |:AiStatus|: a
+claude-code role holding `openai/...`, or an opencode role holding a bare
+`claude-...`, is the tell. <leader>9m sets both together and avoids it.
+
+.nvim.lua seems ignored ~
+It needs trusting once with |:trust|, and `require("ninetynine")` no longer
+exists — a file still calling it errors. Use |ai.setup()|.
+
+Which layer won? ~
+|:AiStatus| prints `source` per role: default, tier:NAME, project, session.
+
+ vim:tw=78:ts=8:noet:ft=help:norl:

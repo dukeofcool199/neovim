@@ -1,5 +1,8 @@
 # AI task prompts
 
+> In-editor reference: `:help ai-registry`. Roles, the resolution layers,
+> `.nvim.lua` recipes, every `:Ai*` command and the keymaps live there.
+
 > codecompanion is not imported right now, so nothing in this section is bound
 > to a key. The prompts and the guidance below survive for when it comes back.
 
@@ -66,8 +69,7 @@ role's model.
 | key | does |
 |---|---|
 | `9v` `9s` | rewrite the selection (`edit`), search the project (`search`) |
-| `9m` `9M` | pick the model for `edit`, for `search` |
-| `9p` | pick the agent behind `edit`, then its model |
+| `9m` `9M` | pick the agent and model for `edit`, for `search` |
 | `9x` `9o` `9l` | stop all requests, open the last interaction, view logs |
 
 ```lua
@@ -86,9 +88,20 @@ permission set denying every edit outside 99's tmp file, plus bash and task,
 while claude-code runs `--dangerously-skip-permissions` with no fence. opencode
 is the default on both roles for that reason.
 
-`9m` on a claude-code backend offers the registry's model list rather than 99's
-own, which is a generation stale — the claude CLI cannot enumerate models, so
-someone has to hold the list and the registry already does.
+`9m` lists every model across every agent, each row naming its own, so picking a
+claude row moves the role onto claude in the same keypress:
+
+```
+claude-code  claude-opus-5
+claude-code  claude-sonnet-5
+opencode     openai/gpt-5.5
+opencode     openai/gpt-5.6-fast
+```
+
+The claude rows come from the registry rather than 99's own list, which is a
+generation stale — the claude CLI cannot enumerate models, so someone has to
+hold the list and the registry already does. Use `:AiBackend <role> <backend>`
+to move a role without touching its model.
 
 ## Choosing the agent per project (avante, dormant)
 
