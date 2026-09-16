@@ -1,12 +1,20 @@
 # Working/idle state for the sidekick CLI agents.
 #
 # The agents run in a float you toggle away, so the moment one is hidden there
-# is nothing on screen saying whether it is still going. The agents do say so,
-# in their terminal title: a spinner glyph while they work, U+2733 when they
-# are back at the prompt. This tracks that per session and turns it into two
-# statusline segments -- a spinner on whatever is working, and a mark on an
-# agent that finished while its terminal was hidden, which stays up until the
-# terminal is opened again.
+# is nothing on screen saying whether it is still going. Each tool announces
+# itself differently, so three signals feed the one answer per session:
+#
+#   title     a spinner glyph at the head of the OSC title        (claude)
+#   progress  OSC 9;4;3 while a turn runs, 9;4;0 when it ends     (pi)
+#   screen    the tool's own footer, read off the terminal        (opencode, aider)
+#
+# The first two arrive as events; only `screen` needs the poll below. A
+# terminal buffer keeps updating while its window is hidden, which is what
+# makes reading the screen work in the case that matters.
+#
+# Two statusline segments come out of it -- a spinner on whatever is working,
+# and a mark on an agent that finished while its terminal was hidden, which
+# stays up until the terminal is opened again.
 #
 # A blocked agent (waiting on a permission prompt) stops spinning too, so it
 # reads as finished here. That is the intent: both mean the agent wants you.
@@ -16,15 +24,49 @@
       local M = {}
 
       local SPIN_MS = 100
+      local IDLE_MS = 500
+      local SCREEN_LINES = 12
+      local QUIET_MS = 2000
+
+      --- Which signals speak for which tool. Screen patterns are Lua patterns
+      --- matched against lowercased lines, and follow herdr's detection rules.
+      --- A tool with no entry gets the two event-driven signals and no guessed
+      --- screen rule.
+      local RULES = {
+        claude = {title = true, progress = true},
+        pi = {progress = true, screen = {working = {"working%.%.%.", "^── .- working "}}},
+        opencode = {
+          screen = {
+            working = {
+              "esc to interrupt",
+              "esc again to interrupt",
+              "ctrl%+c to interrupt",
+              "■■■■",
+              "⬝⬝⬝⬝",
+            },
+          },
+        },
+        -- aider has no marker of its own once the response starts streaming,
+        -- so it is working whenever its prompt is out of sight and the screen
+        -- is still moving. The quiescence guard is what keeps a static
+        -- non-prompt screen -- a pager, a dumped diff -- from spinning forever.
+        aider = {screen = {idle = {"^%s*>%s", "^multi>"}}},
+      }
+      local DEFAULT = {title = true, progress = true}
 
       ---@class ai.cli.Agent
       ---@field tool string
       ---@field working boolean
       ---@field since integer  -- vim.uv.now() when the state last changed
       ---@field unseen boolean -- stopped with its terminal hidden, not looked at yet
+      ---@field screen string  -- last scrape, to tell a moving screen from a still one
+      ---@field screen_at integer
 
       local agents = {} ---@type table<string, ai.cli.Agent>
+      local progress = {} ---@type table<integer, boolean> -- terminal buf -> OSC 9;4 state
       local timer ---@type uv.uv_timer_t?
+      local timer_ms ---@type integer?
+      local spinning = false
 
       local function terminals()
         local ok, Terminal = pcall(require, "sidekick.cli.terminal")
@@ -34,6 +76,10 @@
       local function tool_name(term)
         local tool = term.tool
         return type(tool) == "table" and tool.name or tostring(tool)
+      end
+
+      local function rules(tool)
+        return RULES[tool] or DEFAULT
       end
 
       local function title_of(term)
@@ -47,7 +93,7 @@
       --- ranges are herdr's, from its `osc_title_working` detection rule:
       --- braille up to claude 2.1.227, half-circles from 2.1.228.
       ---@param title? string
-      function M.is_working(title)
+      local function title_working(title)
         if type(title) ~= "string" or vim.fn.strgetchar(title, 1) ~= 32 then
           return false
         end
@@ -55,28 +101,61 @@
         return (glyph >= 0x2800 and glyph <= 0x28FF) or (glyph >= 0x25D0 and glyph <= 0x25D3)
       end
 
-      --- Title of the most recently active agent terminal, if any. Read live
-      --- off the terminals rather than out of the table below, so a caller on
-      --- the same autocmd cannot race the bookkeeping.
-      function M.title()
-        local title, atime
-        for _, term in pairs(terminals()) do
-          local t = title_of(term)
-          if t and t ~= "" and (not atime or (term.atime or 0) >= atime) then
-            title, atime = t, term.atime or 0
+      --- The bottom SCREEN_LINES non-empty lines, the region herdr's screen
+      --- rules read. Lowercased, so the patterns can be too.
+      local function screen_lines(term)
+        local buf = term.buf
+        if not (buf and vim.api.nvim_buf_is_valid(buf)) then
+          return {}
+        end
+        local n = vim.api.nvim_buf_line_count(buf)
+        local raw = vim.api.nvim_buf_get_lines(buf, math.max(0, n - SCREEN_LINES * 4), n, false)
+        local out = {}
+        for i = #raw, 1, -1 do
+          if raw[i]:find("%S") then
+            table.insert(out, 1, raw[i]:lower())
+            if #out >= SCREEN_LINES then
+              break
+            end
           end
         end
-        return title
+        return out
       end
 
-      --- Is any agent working right now?
-      function M.working()
-        for _, term in pairs(terminals()) do
-          if M.is_working(title_of(term)) then
-            return true
+      local function matches(lines, pats)
+        for _, line in ipairs(lines) do
+          for _, pat in ipairs(pats) do
+            if line:find(pat) then
+              return true
+            end
           end
         end
         return false
+      end
+
+      local function is_working(agent, term)
+        local r = rules(agent.tool)
+        if r.title and title_working(title_of(term)) then
+          return true
+        end
+        if r.progress and progress[term.buf] then
+          return true
+        end
+        if not r.screen then
+          return false
+        end
+
+        local lines = screen_lines(term)
+        local text = table.concat(lines, "\n")
+        if text ~= agent.screen then
+          agent.screen, agent.screen_at = text, vim.uv.now()
+        end
+
+        if r.screen.working then
+          return matches(lines, r.screen.working)
+        end
+        return not matches(lines, r.screen.idle)
+          and (vim.uv.now() - agent.screen_at) < (r.screen.quiet_ms or QUIET_MS)
       end
 
       local function refresh()
@@ -93,43 +172,67 @@
           end
           timer = nil
         end
+        timer_ms = nil
       end
 
-      --- Animate only while something is spinning; the finished mark is static
-      --- text and needs no ticking.
+      --- Spinner rate while something works, a slower poll while a tool that
+      --- only shows on screen is merely open, and nothing otherwise. The
+      --- finished mark is static text and needs no ticking.
       local function tick()
-        local spinning = false
+        spinning = false
         for _, a in pairs(agents) do
           spinning = spinning or a.working
         end
-        if not spinning then
+
+        local polls = false
+        for _, term in pairs(terminals()) do
+          polls = polls or rules(tool_name(term)).screen ~= nil
+        end
+
+        local want = spinning and SPIN_MS or (polls and IDLE_MS or nil)
+        if not want then
           return stop_timer()
         end
-        if timer then
+        if timer and timer_ms == want then
           return
         end
+
+        stop_timer()
+        timer_ms = want
         timer = vim.uv.new_timer()
         timer:start(
-          SPIN_MS,
-          SPIN_MS,
+          want,
+          want,
           vim.schedule_wrap(function()
             M.sync()
-            refresh()
+            if spinning then
+              refresh()
+            end
           end)
         )
       end
 
+      --- Record an OSC 9;4 progress state for a terminal buffer. nvim reports
+      --- the sequence through TermRequest and keeps no variable for it.
+      function M.progress(buf, on)
+        progress[buf] = on or nil
+      end
+
       function M.sync()
-        local changed, live = false, {}
+        local changed, live, bufs = false, {}, {}
 
         for id, term in pairs(terminals()) do
           live[id] = true
+          if term.buf then
+            bufs[term.buf] = true
+          end
           local a = agents[id]
           if not a then
-            a = {tool = tool_name(term), working = false, since = vim.uv.now(), unseen = false}
+            local now = vim.uv.now()
+            a = {tool = tool_name(term), working = false, since = now, unseen = false, screen_at = now}
             agents[id] = a
           end
-          local working = M.is_working(title_of(term))
+          local working = is_working(a, term)
           if working ~= a.working then
             a.working = working
             a.since = vim.uv.now()
@@ -149,10 +252,26 @@
           end
         end
 
+        for buf in pairs(progress) do
+          if not bufs[buf] then
+            progress[buf] = nil
+          end
+        end
+
         if changed then
           refresh()
         end
         tick()
+      end
+
+      --- Is any agent working right now?
+      function M.working()
+        for _, a in pairs(agents) do
+          if a.working then
+            return true
+          end
+        end
+        return false
       end
 
       local function ago(ms)
@@ -166,8 +285,8 @@
       end
 
       local function frame()
-        local ok, progress = pcall(require, "ai.progress")
-        return ok and progress.frame() or "*"
+        local ok, progress_mod = pcall(require, "ai.progress")
+        return ok and progress_mod.frame() or "*"
       end
 
       --- Statusline fragment. `kind` is "working" for the agents running right
@@ -210,8 +329,21 @@
       end
 
       -- TermRequest carries the OSC that sets b:term_title, so the variable is
-      -- only current once the handler has run.
-      vim.api.nvim_create_autocmd({"TermRequest", "TermClose"}, {group = group, callback = sync})
+      -- only current once the handler has run. It also carries OSC 9;4, which
+      -- nvim passes through without recording anywhere.
+      vim.api.nvim_create_autocmd("TermRequest", {
+        group = group,
+        callback = function(ev)
+          local seq = ev.data and ev.data.sequence
+          local state = type(seq) == "string" and seq:match("^\27]9;4;(%d)")
+          if state then
+            require("ai.cli").progress(ev.buf, state ~= "0")
+          end
+          sync()
+        end,
+      })
+
+      vim.api.nvim_create_autocmd("TermClose", {group = group, callback = sync})
 
       -- Opening the terminal is what marks a finished agent as seen.
       vim.api.nvim_create_autocmd({"WinEnter", "WinClosed"}, {group = group, callback = sync})
