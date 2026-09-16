@@ -18,6 +18,7 @@
     patches = [
       ./patches/99-opencode-fix.patch
       ./patches/99-skills.patch
+      ./patches/99-claude-permissions.patch
     ];
     doCheck = false;
   };

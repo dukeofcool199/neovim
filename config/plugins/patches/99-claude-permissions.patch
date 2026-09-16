@@ -1,0 +1,59 @@
+diff --git a/lua/99/providers.lua b/lua/99/providers.lua
+index e69de29..3333333 100644
+--- a/lua/99/providers.lua
++++ b/lua/99/providers.lua
+@@ -245,13 +245,52 @@
+ --- @class ClaudeCodeProvider : _99.Providers.BaseProvider
+ local ClaudeCodeProvider = setmetatable({}, { __index = BaseProvider })
+ 
++--- The fence OpenCodeProvider builds in _build_env, in the shape the claude
++--- CLI takes it: a --settings overlay rather than an env var.
++--- Docs: https://code.claude.com/docs/en/settings#permission-settings
++---
++--- Three things the CLI itself had to teach us, each verified against a live
++--- run rather than read off a page:
++---   * Write(path) is not a file-permission rule. Only Edit(path) is, and it
++---     covers every file-editing tool including Write.
++---   * A rule path opening with one "/" is read as relative to the settings
++---     file. "//" is the filesystem root. The single-slash form is denied.
++---   * deny beats allow, so the write fence cannot be a broad Edit deny with
++---     a narrow allow beside it -- the deny swallows its own exception. What
++---     holds the line is --permission-prompts none: anything off the allow
++---     list prompts, and a prompt nobody can answer is a denial.
++--- @param context _99.Prompt
++--- @return table
++function ClaudeCodeProvider._build_settings(_, context)
++  local tmp_file = vim.fn.fnamemodify(context.tmp_file, ":p")
++  return {
++    permissions = {
++      allow = { string.format("Edit(/%s)", tmp_file) },
++      deny = { "Bash", "Task", "WebFetch", "WebSearch" },
++    },
++  }
++end
++
+ --- @param query string
+ --- @param context _99.Prompt
+ --- @return string[]
+-function ClaudeCodeProvider._build_command(_, query, context)
++function ClaudeCodeProvider._build_command(self, query, context)
++  local tmp_file = vim.fn.fnamemodify(context.tmp_file, ":p")
+   return {
+     "claude",
+-    "--dangerously-skip-permissions",
++    -- manual, not acceptEdits: acceptEdits waves through every edit in the
++    -- tree, which is the permissiveness this replaces.
++    "--permission-mode",
++    "manual",
++    "--permission-prompts",
++    "none",
++    "--settings",
++    vim.json.encode(self:_build_settings(context)),
++    -- The prompt hands claude an absolute TEMP_FILE path. A tmp_dir outside
++    -- the cwd is otherwise out of reach, the same case OpenCodeProvider
++    -- covers with its external_directory allow.
++    "--add-dir",
++    vim.fn.fnamemodify(tmp_file, ":h"),
+     "--model",
+     context.model,
+     "--print",
