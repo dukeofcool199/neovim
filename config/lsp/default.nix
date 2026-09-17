@@ -78,6 +78,11 @@
         enable = true;
       };
 
+      # Java
+      jdtls = {
+        enable = true;
+      };
+
       # Nix
       nixd = {
         enable = true;
