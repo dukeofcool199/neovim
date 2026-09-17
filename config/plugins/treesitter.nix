@@ -8,6 +8,7 @@
     };
     settings = {
       highlight.enable = true;
+      ensureInstalled = ["java" "kotlin"];
     };
   };
 
