@@ -21,6 +21,9 @@
 
         c = ["clang-format"];
         cpp = ["clang-format"];
+
+        java = ["google-java-format"];
+        kotlin = ["ktfmt"];
       };
     };
   };
@@ -30,5 +33,7 @@
     alejandra
     stylua
     clang-tools
+    google-java-format
+    ktfmt
   ];
 }
