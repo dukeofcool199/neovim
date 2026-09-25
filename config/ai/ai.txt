@@ -46,14 +46,31 @@ Four layers resolve, later winning:
 	next-edit			minuet duet (dormant)
 
 `edit` and `search` drive a CLI agent, so their backend must be one that
-names a provider 99 can load. Two do:
+names a provider 99 can load. Three do:
 
-	opencode	fenced. Spawned with a permission set denying every
-			edit outside 99's tmp file, plus bash and task.
-	claude-code	NOT fenced. Runs --dangerously-skip-permissions.
+	opencode	the `opencode` binary, its own credentials.
+			Models are `provider/model`: `openai/gpt-5.5`.
+	claude-code	the `claude` binary, your own login.
+			Models are Anthropic's: `claude-opus-5`.
+	claude-go	the same claude binary through the `claude-go`
+			wrapper, which points it at OpenCode Go and
+			supplies that credential. Models are go's:
+			`minimax-m3`, `qwen3.8-max`, `kimi-k3`.
 
-opencode is the default on both roles for that reason. Choosing claude-code
-is choosing to hand an unfenced agent your tree.
+All three are fenced: opencode by a permission set denying every edit outside
+99's tmp file plus bash and task, the claude pair by a --settings allow-list
+run with --permission-prompts none. opencode is the default on both roles.
+
+claude-go exists because the claude CLI is the better 99 driver while the
+OpenCode Go subscription is the cheaper model pool; it is the two together.
+Nothing claude-* runs on it -- go serves no Anthropic models.
+
+Its model list is shorter than go's own. go serves 42 ids over two protocols
+and the claude CLI can only speak one of them: a model outside the Anthropic
+set answers `/v1/messages` with ModelProtocolUnsupported, whatever the
+request says. The registry carries the eleven that answer, so the picker
+cannot offer a row that will not run. Re-derive the list by POSTing a
+one-token message to `/v1/messages` for every id `/v1/models` returns.
 
 ==============================================================================
 3. PROJECT CONFIGURATION                                           *ai-project*
@@ -73,9 +90,10 @@ Setting claude-code and a model as the default for this project: >lua
 	})
 <
 Both fields are needed when changing agent: each agent has its own model
-namespace. opencode wants `provider/model` (`openai/gpt-5.5`), claude wants a
-bare id (`claude-opus-5`). A model from the wrong namespace fails at run time,
-not at startup.
+namespace. opencode wants `provider/model` (`openai/gpt-5.5`), claude-code a
+bare Anthropic id (`claude-opus-5`), claude-go one of the OpenCode Go ids
+listed for it (`minimax-m3`). A model from the wrong namespace fails at run
+time, not at startup.
 
 :AiStatus will then show both roles with source `project`.
 
@@ -181,9 +199,14 @@ picking a claude row moves the role onto claude in one keypress: >
 
 	claude-code  claude-opus-5
 	claude-code  claude-sonnet-5
+	claude-go    minimax-m3
+	claude-go    qwen3.8-max
 	opencode     openai/gpt-5.5
 	opencode     openai/gpt-5.6-fast
 <
+The claude-code rows come from the registry, since the claude CLI cannot
+enumerate its own models; the claude-go rows are OpenCode Go's /v1/models,
+fetched when the picker opens.
 sidekick's terminal agents, under <leader>a, run the `cli` role. <C-g>
 toggles the overlay. See |ai-roles|.
 
@@ -234,7 +257,8 @@ require("ai").on_change({cb})
 A model picker shows nothing ~
 The agent could not enumerate its models. opencode needs `opencode models` to
 work on the command line; claude-code carries a list in the registry instead,
-since the claude CLI cannot enumerate its own.
+since the claude CLI cannot enumerate its own; so does claude-go, whose list
+is the subset of OpenCode Go that speaks the Anthropic protocol.
 
 99 reports a role is "not a CLI agent 99 can drive" ~
 The role's backend names an HTTP endpoint (opencode-go) rather than an agent.
@@ -242,8 +266,44 @@ Only backends with a provider work: `opencode` and `claude-code`.
 
 A 99 run fails immediately after switching agent ~
 Likely a model from the other agent's namespace. Check |:AiStatus|: a
-claude-code role holding `openai/...`, or an opencode role holding a bare
-`claude-...`, is the tell. <leader>9m sets both together and avoids it.
+claude-code role holding `openai/...`, an opencode role holding a bare
+`claude-...`, or a claude-go role holding any `claude-...` at all, is the
+tell. <leader>9m sets both together and avoids it.
+
+claude-go warns on every run ~
+Two lines on stderr, both expected and neither fatal. `unrecognized_model`
+says the id is not in the CLI's own catalogue, which no go id is; the
+request still carries that id to the gateway unaltered. The other says
+claude.ai connectors are off, because a gateway credential takes precedence
+over the claude.ai login. Neither reports a failed request -- a real failure
+arrives as a `claude-go:` line naming what the gateway objected to. stdout
+carries only the answer.
+
+The longer complaint about the model catalog and auto-compact is gone: the
+wrapper names the context window ($CLAUDE_CODE_MAX_CONTEXT_TOKENS, 200k),
+which is what the CLI could not look up for an id it does not know.
+
+99 reports a credential error on claude-go ~
+The wrapper resolves $OPENCODE_API_KEY first and `pass show ai/opencode-go`
+on a miss, the same order as |:AiAuth|. With neither, it exits before
+spawning claude and says so. `claude-go -p hi --model minimax-m3` in a
+shell isolates whether the problem is the credential or Neovim.
+
+The gateway answers ModelProtocolUnsupported ~
+That id is one of go's, but it is not served over the Anthropic protocol,
+which is the only one the claude CLI speaks. Nothing configures around it --
+pick a model the registry lists for claude-go.
+
+A claude-go request used to hang ~
+It cannot any more, and this is why it did: the CLI treats every gateway
+failure as retryable, so a rejected key became an exponential backoff that
+printed nothing and never exited, and 99 waits on exit. The wrapper now caps
+a non-interactive run at 300 seconds ($CLAUDE_GO_TIMEOUT), then asks the
+gateway what it objects to and prints that answer -- "Invalid API key.",
+"Model X is not supported." -- on stderr. The cap applies to any --print run
+and to any run whose stdout is not a terminal, which covers 99 and every
+smoke test; a real interactive session is left uncapped, since there the
+backoff is on screen and interruptible.
 
 .nvim.lua seems ignored ~
 It needs trusting once with |:trust|, and `require("ninetynine")` no longer

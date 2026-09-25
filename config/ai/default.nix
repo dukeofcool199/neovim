@@ -11,6 +11,86 @@
   registry = import ./registry.nix;
   registryJson = builtins.toJSON registry;
 
+  goEndpoint = registry.endpoints.opencode-go;
+  goAuth = registry.auth.${goEndpoint.auth};
+
+  # The `claude-go` agent's binary: the claude CLI against OpenCode Go, which
+  # answers the Anthropic protocol at /v1/messages.
+  #
+  # A wrapper rather than an env table on the agent, because the token stays
+  # out of argv and out of Neovim: 99 spawns through vim.system, which passes
+  # the editor's environment down untouched, so the shell resolves the same
+  # credential ai.auth would -- env first, `pass` on a miss -- without a GPG
+  # prompt ever blocking the UI thread.
+  claude-go = pkgs.writeShellScriptBin "claude-go" ''
+    export ANTHROPIC_BASE_URL=${goEndpoint.url}
+    # x-api-key, not Authorization: Bearer. The gateway reads only the former
+    # -- given a bearer token it answers "Missing API key.", word for word what
+    # it answers with no credential at all. ANTHROPIC_API_KEY is the variable
+    # that produces x-api-key; ANTHROPIC_AUTH_TOKEN produces the bearer header
+    # and must not survive into the child.
+    export ANTHROPIC_API_KEY="''${${goAuth.env}:-$(pass show ${goAuth.pass} 2>/dev/null | head -1)}"
+    unset ANTHROPIC_AUTH_TOKEN
+    # claude's own background calls (titles, summaries) go to a haiku id that
+    # does not exist on this base.
+    export ANTHROPIC_DEFAULT_HAIKU_MODEL=minimax-m2.5
+    export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+    # go's ids are not in the CLI's catalogue, so it cannot look up a context
+    # window and says so at length on every run. Naming the window silences
+    # that and pins auto-compact to a figure go's models all meet.
+    export CLAUDE_CODE_MAX_CONTEXT_TOKENS=200000
+    # Mandatory, not an optimisation: without it the gateway refuses the
+    # request outright with MissingSessionID. One id per invocation, the shape
+    # ai.opencode uses for the HTTP consumers.
+    export ANTHROPIC_CUSTOM_HEADERS="x-opencode-session: claude-go-$$-''${EPOCHSECONDS}"
+
+    if [ -z "$ANTHROPIC_API_KEY" ]; then
+      echo "claude-go: no OpenCode Go credential. Set ${goAuth.env} or \`pass insert ${goAuth.pass}\`; :AiAuth! reports what Neovim can see." >&2
+      exit 1
+    fi
+
+    # Every API failure the gateway returns is retryable as far as the CLI is
+    # concerned, so a rejected key becomes an exponential backoff that never
+    # ends and never prints -- a caller waiting on exit, which is what 99 does,
+    # hangs. A cap turns that into an ordinary failed request.
+    #
+    # Capped for a one-shot (--print, which is how 99 and every smoke test run
+    # it) or when nothing is watching stdout. A real interactive session is
+    # left alone, since there the backoff is visible and interruptible.
+    model=""
+    oneshot=""
+    prev=""
+    for arg in "$@"; do
+      case $arg in
+        -p | --print) oneshot=1 ;;
+      esac
+      [ "$prev" = "--model" ] && model=$arg
+      prev=$arg
+    done
+    [ -t 1 ] || oneshot=1
+
+    if [ -n "$oneshot" ]; then
+      ${pkgs.coreutils}/bin/timeout "''${CLAUDE_GO_TIMEOUT:-300}" claude "$@"
+    else
+      claude "$@"
+    fi
+    status=$?
+    [ $status -eq 0 ] && exit 0
+
+    # The CLI swallows the response body, so ask the gateway directly and put
+    # its own words where the caller can see them.
+    reason=$(${pkgs.curl}/bin/curl -sS --max-time 20 \
+      -X POST "$ANTHROPIC_BASE_URL/v1/messages" \
+      -H "x-api-key: $ANTHROPIC_API_KEY" \
+      -H "anthropic-version: 2023-06-01" \
+      -H "content-type: application/json" \
+      -H "x-opencode-session: claude-go-probe-$$" \
+      -d "{\"model\":\"''${model:-minimax-m2.5}\",\"max_tokens\":1,\"messages\":[{\"role\":\"user\",\"content\":\".\"}]}" \
+      2>&1 | head -c 300)
+    echo "claude-go: exit $status. The gateway answers: $reason" >&2
+    exit $status
+  '';
+
   # `:help ai-registry`. A doc-only plugin so buildVimPlugin's helptag hook
   # generates doc/tags; a loose file in the config dir gets no tags.
   ai-doc = pkgs.vimUtils.buildVimPlugin {
@@ -24,6 +104,8 @@ in {
   imports = [./actions.nix ./progress.nix ./cli.nix];
 
   extraPlugins = [ai-doc];
+
+  extraPackages = [claude-go];
 
   extraConfigLuaPre = ''
     do
@@ -214,6 +296,9 @@ in {
             r.transport = agent.transport
             r.endpoint = agent.endpoint
             r.provider = agent.provider
+            -- The binary is the agent's, not the role's: claude-code and
+            -- claude-go are one provider and two commands.
+            r.command = agent.command or r.command
           elseif r.backend and registry.endpoints[r.backend] then
             r.endpoint = r.backend
           end
@@ -422,10 +507,43 @@ in {
           return nil
         end
 
+        --- Model ids an OpenAI-shaped /v1/models serves. Reached both by a
+        --- role that resolves to a url and by an agent that names an endpoint.
+        local function models_from_url(url, api_key, cb)
+          local cmd = {"curl", "-s", "--max-time", "10", url .. "/v1/models"}
+          local k = api_key and api_key() or nil
+          if k then
+            table.insert(cmd, "-H")
+            table.insert(cmd, "Authorization: Bearer " .. k)
+          end
+          if url:find("opencode.ai", 1, true) then
+            for name, value in pairs(require("ai.opencode").headers("models")) do
+              table.insert(cmd, "-H")
+              table.insert(cmd, name .. ": " .. value)
+            end
+          end
+          vim.system(cmd, {text = true}, function(obj)
+            vim.schedule(function()
+              local ok, parsed = pcall(vim.json.decode, obj.stdout or "")
+              local list = {}
+              if ok and type(parsed) == "table" and parsed.data then
+                for _, m in ipairs(parsed.data) do
+                  if m.id then
+                    table.insert(list, m.id)
+                  end
+                end
+              end
+              table.sort(list)
+              cb(list)
+            end)
+          end)
+        end
+
         --- Models one CLI agent can reach, cached under the agent's name.
         --- An agent that cannot enumerate its own (claude) carries the list in
-        --- the registry; one bound to a single provider carries a prefix to
-        --- narrow `opencode models` with, and wants bare names back.
+        --- the registry; one naming an endpoint asks that endpoint; one bound
+        --- to a single provider carries a prefix to narrow `opencode models`
+        --- with, and wants bare names back.
         local function models_for_agent(backend, cb)
           local agent = backend and registry.agents and registry.agents[backend] or nil
           if not agent then
@@ -440,6 +558,10 @@ in {
           end
           if type(agent.models) == "table" then
             return done(vim.deepcopy(agent.models))
+          end
+          local ep = agent.endpoint and registry.endpoints[agent.endpoint] or nil
+          if ep then
+            return models_from_url(ep.url, ep.auth and auth.fn(ep.auth) or nil, done)
           end
           local prefix = agent.models and (agent.models .. "/") or nil
           vim.system({"opencode", "models"}, {text = true}, function(obj)
@@ -493,7 +615,15 @@ in {
           if not r then
             return cb({})
           end
-          local key = r.url or r.backend or r.command or "?"
+          local backend = r.backend or agent_for_command(r.command)
+          local agent = backend and registry.agents and registry.agents[backend] or nil
+          -- An agent carrying its own list outranks the endpoint it names:
+          -- claude-go can see every model go serves and drive only the subset
+          -- that answers the Anthropic protocol.
+          if agent and type(agent.models) == "table" then
+            return models_for_agent(backend, cb)
+          end
+          local key = r.url or backend or r.command or "?"
           if model_cache[key] then
             return cb(model_cache[key])
           end
@@ -502,35 +632,9 @@ in {
             cb(list)
           end
           if r.url then
-            local cmd = {"curl", "-s", "--max-time", "10", r.url .. "/v1/models"}
-            local k = r.api_key and r.api_key() or nil
-            if k then
-              table.insert(cmd, "-H")
-              table.insert(cmd, "Authorization: Bearer " .. k)
-            end
-            if r.url:find("opencode.ai", 1, true) then
-              for name, value in pairs(require("ai.opencode").headers("models")) do
-                table.insert(cmd, "-H")
-                table.insert(cmd, name .. ": " .. value)
-              end
-            end
-            vim.system(cmd, {text = true}, function(obj)
-              vim.schedule(function()
-                local ok, parsed = pcall(vim.json.decode, obj.stdout or "")
-                local list = {}
-                if ok and type(parsed) == "table" and parsed.data then
-                  for _, m in ipairs(parsed.data) do
-                    if m.id then
-                      table.insert(list, m.id)
-                    end
-                  end
-                end
-                table.sort(list)
-                done(list)
-              end)
-            end)
+            models_from_url(r.url, r.api_key, done)
           else
-            models_for_agent(r.backend or agent_for_command(r.command), done)
+            models_for_agent(backend, done)
           end
         end
 

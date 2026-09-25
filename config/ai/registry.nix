@@ -109,8 +109,7 @@
       requires = ["instruct"];
     };
     # 99's two roles. Both drive a CLI agent, so the backend must be one of
-    # `agents` below that names a `provider`. opencode is the default on both
-    # because it is the only one 99 fences (see `provider`).
+    # `agents` below that names a `provider`.
     edit = {
       backend = "opencode";
       model = "openai/gpt-5.5";
@@ -142,20 +141,52 @@
   #
   # `models` is what the picker offers: a list when the agent cannot enumerate
   # them itself (claude has no models command), or a provider prefix to narrow
-  # `opencode models`. The claude list here is why the picker is worth routing
-  # through `ai.models` -- 99 ships its own, and it is a generation stale.
+  # `opencode models`. An agent naming an `endpoint` needs neither -- its list
+  # is that endpoint's /v1/models, fetched live.
   #
   # `provider` names the key in `_99.Providers`, and its absence means 99
-  # cannot reach this agent. The two differ in more than argv: opencode is
-  # handed a permission set denying every edit outside 99's tmp file plus bash
-  # and task, while claude-code runs --dangerously-skip-permissions with no
-  # fence at all. Point `edit` at claude-code only when that is what you want.
+  # cannot reach this agent. `command` is the binary 99 spawns for it, which is
+  # how two agents share one provider: claude-code and claude-go are both
+  # ClaudeCodeProvider, differing only in which claude they run.
+  #
+  # All three fence 99's agent, by their own route: opencode by a permission
+  # set denying every edit outside the tmp file plus bash and task, the claude
+  # pair by a --settings allow-list with --permission-prompts none.
   agents = {
     claude-code = {
       transport = "acp";
       command = "claude";
       provider = "ClaudeCodeProvider";
       models = ["claude-sonnet-5" "claude-opus-5" "claude-fable-5-1" "claude-haiku-4-5-20251001"];
+    };
+    # The same claude CLI pointed at OpenCode Go: the wrapper in
+    # config/ai/default.nix supplies the base URL, the `opencode-go`
+    # credential and the session header the gateway requires. Nothing claude-*
+    # runs on it -- go serves no Anthropic models.
+    #
+    # The list is here rather than left to the endpoint because go's
+    # /v1/models answers with all 42 ids while only these speak the Anthropic
+    # protocol; the rest answer /v1/messages with ModelProtocolUnsupported and
+    # would be rows in the picker that cannot work. Re-derive it by POSTing a
+    # one-token message to /v1/messages for each id the endpoint lists.
+    claude-go = {
+      transport = "acp";
+      command = "claude-go";
+      provider = "ClaudeCodeProvider";
+      endpoint = "opencode-go";
+      models = [
+        "minimax-m3"
+        "minimax-m2.7"
+        "minimax-m2.5"
+        "kimi-k3"
+        "qwen3.8-max"
+        "qwen3.8-flash"
+        "qwen3.7-max"
+        "qwen3.7-plus"
+        "qwen3.6-plus"
+        "deepseek-v4-flash-vision-exp"
+        "space-bunny-free"
+      ];
     };
     opencode = {
       transport = "acp";

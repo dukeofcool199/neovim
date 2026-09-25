@@ -2,7 +2,7 @@ diff --git a/lua/99/providers.lua b/lua/99/providers.lua
 index e69de29..3333333 100644
 --- a/lua/99/providers.lua
 +++ b/lua/99/providers.lua
-@@ -245,13 +245,52 @@
+@@ -245,13 +245,54 @@
  --- @class ClaudeCodeProvider : _99.Providers.BaseProvider
  local ClaudeCodeProvider = setmetatable({}, { __index = BaseProvider })
  
@@ -39,8 +39,11 @@ index e69de29..3333333 100644
 +function ClaudeCodeProvider._build_command(self, query, context)
 +  local tmp_file = vim.fn.fnamemodify(context.tmp_file, ":p")
    return {
-     "claude",
+-    "claude",
 -    "--dangerously-skip-permissions",
++    -- Which claude: the agent's `command` from the registry, stashed on this
++    -- table by 99.nix before the run. claude-code leaves it nil.
++    self._command or "claude",
 +    -- manual, not acceptEdits: acceptEdits waves through every edit in the
 +    -- tree, which is the permissiveness this replaces.
 +    "--permission-mode",

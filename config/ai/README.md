@@ -83,10 +83,17 @@ require("ai").setup({
 `require("ninetynine")` is gone; a project file that still calls it will error.
 
 Both roles must sit on an agent that names a `provider` in the registry —
-`opencode` or `claude-code`. They are not equivalent: opencode is spawned with a
-permission set denying every edit outside 99's tmp file, plus bash and task,
-while claude-code runs `--dangerously-skip-permissions` with no fence. opencode
-is the default on both roles for that reason.
+`opencode`, `claude-code` or `claude-go`. All three are fenced: opencode by a
+permission set denying every edit outside 99's tmp file plus bash and task, the
+claude pair by a `--settings` allow-list run with `--permission-prompts none`.
+opencode is the default on both roles.
+
+`claude-go` is the same `claude` binary as `claude-code`, run through the
+`claude-go` wrapper built in `config/ai/default.nix`: it exports
+`ANTHROPIC_BASE_URL` for OpenCode Go and the `opencode-go` credential, so the
+claude CLI drives go's models (`minimax-m3`, `qwen3.8-max`) instead of
+Anthropic's. Only the eleven go ids that answer the Anthropic protocol are
+listed for it; the rest of go's 42 reply ModelProtocolUnsupported. The wrapper is on PATH, so it works from a shell too.
 
 `9m` lists every model across every agent, each row naming its own, so picking a
 claude row moves the role onto claude in the same keypress:
@@ -94,14 +101,18 @@ claude row moves the role onto claude in the same keypress:
 ```
 claude-code  claude-opus-5
 claude-code  claude-sonnet-5
+claude-go    minimax-m3
+claude-go    qwen3.8-max
 opencode     openai/gpt-5.5
 opencode     openai/gpt-5.6-fast
 ```
 
-The claude rows come from the registry rather than 99's own list, which is a
-generation stale — the claude CLI cannot enumerate models, so someone has to
-hold the list and the registry already does. Use `:AiBackend <role> <backend>`
-to move a role without touching its model.
+The claude-code rows come from the registry rather than 99's own list, which is
+a generation stale — the claude CLI cannot enumerate models, so someone has to
+hold the list and the registry already does. The claude-go rows are a list too, and
+have to be: go's `/v1/models` answers with every id it serves, most of which
+the claude CLI cannot drive. Use
+`:AiBackend <role> <backend>` to move a role without touching its model.
 
 ## Choosing the agent per project (avante, dormant)
 
@@ -122,6 +133,7 @@ require("ai").setup({
 | backend | transport | model reaches it as |
 |---|---|---|
 | `claude-code` | ACP, `claude-agent-acp` over your own `claude` login | `ANTHROPIC_MODEL` in the agent's environment |
+| `claude-go` | the `claude-go` wrapper: `claude` against OpenCode Go | `--model`, from go's Anthropic-protocol subset |
 | `opencode` | ACP, `opencode acp` | `OPENCODE_CONFIG_CONTENT` in the agent's environment |
 | `opencode-go` | HTTP, OpenCode Go with the `opencode-go` credential | per request |
 

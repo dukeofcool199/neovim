@@ -67,9 +67,12 @@ in {
       },
     })
 
-    -- Run a 99 op under its role's agent and model. Both are snapshotted
-    -- synchronously into the request at creation, so this is race-free with
-    -- the async prompt that follows.
+    -- Run a 99 op under its role's agent and model. The model is snapshotted
+    -- into the request at creation, so it is race-free with the async prompt
+    -- that follows; the provider and its binary are 99's own late binding,
+    -- read when the request fires. Two prompts open on different claude
+    -- agents at once therefore race on the binary, and lose loudly -- an
+    -- Anthropic model id against OpenCode Go is a model error, not a bad edit.
     _G.ninetynine_run = function(role, fn)
       local r = require("ai").role(role)
       if not r then
@@ -82,6 +85,9 @@ in {
           vim.log.levels.WARN
         )
       end
+      -- Which claude: claude-go names its wrapper, claude-code sets nothing
+      -- and the patched provider falls back to the plain binary.
+      provider._command = r.command
       -- set_provider resets the model to that provider's own default, so the
       -- order here is forced.
       _99.set_provider(provider)
