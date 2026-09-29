@@ -1,8 +1,16 @@
 diff --git a/lua/99/init.lua b/lua/99/init.lua
-index e69de29..1111111 100644
+index 3222014..13dbe32 100644
 --- a/lua/99/init.lua
 +++ b/lua/99/init.lua
-@@ -456,6 +456,7 @@ function _99.setup(opts)
+@@ -62,6 +62,7 @@ end
+ --- captured session id
+ --- @field pi_thinking? string pi thinking level: off, minimal, low, medium, high, xhigh, max (default "max")
+ --- @field display_errors? boolean when true, request failures render as a compact float instead of a notification
++--- @field auto_add_skills? boolean when true, every completion.custom_rules skill is injected into each prompt
+ --- @field completion? _99.Completion
+ --- @field tmp_dir? string
+ 
+@@ -479,6 +480,7 @@ function _99.setup(opts)
    _99_state.__tmp_dir = opts.tmp_dir
  
    _99_state.display_errors = opts.display_errors or false
@@ -10,12 +18,11 @@ index e69de29..1111111 100644
    _99_state:refresh_rules()
    Extensions.init(_99_state)
    Extensions.capture_project_root()
-
 diff --git a/lua/99/prompt.lua b/lua/99/prompt.lua
-index e69de29..2222222 100644
+index f5df9bf..431dafc 100644
 --- a/lua/99/prompt.lua
 +++ b/lua/99/prompt.lua
-@@ -5,6 +5,7 @@ local BaseProvider = require("99.providers")
+@@ -2,6 +2,7 @@ local BaseProvider = require("99.providers")
  local Logger = require("99.logger.logger")
  local utils = require("99.utils")
  local random_file = utils.random_file
@@ -23,7 +30,7 @@ index e69de29..2222222 100644
  local copy = utils.copy
  local get_id = require("99.id")
  local Range = require("99.geo").Range
-@@ -447,6 +448,26 @@ function Prompt:_read_md_files()
+@@ -464,6 +465,26 @@ function Prompt:_read_md_files()
  
      dir = vim.fn.fnamemodify(dir, ":h")
    end
@@ -50,16 +57,31 @@ index e69de29..2222222 100644
  end
  
  --- @return string[]
-
 diff --git a/lua/99/state.lua b/lua/99/state.lua
-index e69de29..3333333 100644
+index db17f5a..2c3c5a7 100644
 --- a/lua/99/state.lua
 +++ b/lua/99/state.lua
-@@ -49,6 +49,7 @@ local function create()
+@@ -88,6 +88,7 @@ end
+ --- @field prompts _99.Prompts
+ --- @field ai_stdout_rows number
+ --- @field display_errors boolean
++--- @field auto_add_skills boolean
+ --- @field provider_override _99.Providers.BaseProvider | nil
+ --- @field __view_log_idx number
+ --- @field __tmp_dir string | nil
+@@ -104,6 +105,7 @@ end
+ --- @field prompts _99.Prompts
+ --- @field ai_stdout_rows number
+ --- @field display_errors boolean
++--- @field auto_add_skills boolean
+ --- @field provider_override _99.Providers.BaseProvider?
+ --- @field provider_extra_args string[]
+ --- @field rules _99.Agents.Rules
+@@ -122,6 +124,7 @@ local function create()
      md_files = {},
-     ai_stdout_rows = 3,
+     ai_stdout_rows = 1,
      display_errors = false,
 +    auto_add_skills = false,
      provider_override = nil,
      tmp_dir = nil,
-   }
+     opencode_no_session_persistence = true,

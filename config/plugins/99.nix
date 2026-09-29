@@ -10,13 +10,13 @@
   plugin-99 = pkgs.vimUtils.buildVimPlugin {
     name = "99";
     src = pkgs.fetchFromGitHub {
-      owner = "dukeofcool199";
+      owner = "whiteboardguy";
       repo = "99";
-      rev = "c17422457027c913c76c75a921fca1e623d2678e";
-      sha256 = "0jnbjgcvw72z0xjqngkc941wva9rv7ybqaldxlpp541mdy46jaca";
+      rev = "9e39fb8f2370b2f4939ec4de9756b5dc656b84cf";
+      sha256 = "sha256-UcEHjs9XCsoicSKanMqPRcFRI2xPaoAML+lWGK1D67o=";
     };
     patches = [
-      ./patches/99-opencode-fix.patch
+      ./patches/99-opencode-fence.patch
       ./patches/99-skills.patch
       ./patches/99-claude-permissions.patch
     ];

@@ -1,0 +1,120 @@
+diff --git a/lua/99/providers/base.lua b/lua/99/providers/base.lua
+index 83c308f..acb264c 100644
+--- a/lua/99/providers/base.lua
++++ b/lua/99/providers/base.lua
+@@ -11,6 +11,7 @@ local once = utils.once
+ 
+ --- @class _99.Providers.BaseProvider
+ --- @field _build_command fun(self: _99.Providers.BaseProvider, query: string, context: _99.Prompt): string[]
++--- @field _build_env? fun(self: _99.Providers.BaseProvider, context: _99.Prompt): table<string, string>
+ --- @field _get_provider_name fun(self: _99.Providers.BaseProvider): string
+ --- @field _get_default_model fun(): string
+ local BaseProvider = {}
+@@ -198,33 +199,40 @@ function BaseProvider:make_request(query, context, observer)
+       end
+     end
+ 
++    local opts = {
++      text = true,
++      stdout = vim.schedule_wrap(function(err, data)
++        if err and err ~= "" then
++          logger:debug("stdout#error", "err", err)
++        end
++        if not err then
++          handle_stdout(data)
++        end
++      end),
++      stderr = vim.schedule_wrap(function(err, data)
++        logger:debug("stderr", "data", data)
++        if context:is_cancelled() then
++          finish("cancelled", "")
++          return
++        end
++        if err and err ~= "" then
++          logger:debug("stderr#error", "err", err)
++        end
++        if not err and data then
++          table.insert(stderr_chunks, data)
++          observer.on_stderr(data)
++        end
++      end),
++    }
++
++    if self._build_env then
++      opts.env =
++        vim.tbl_extend("force", vim.fn.environ(), self:_build_env(context))
++    end
++
+     local proc = vim.system(
+       command,
+-      {
+-        text = true,
+-        stdout = vim.schedule_wrap(function(err, data)
+-          if err and err ~= "" then
+-            logger:debug("stdout#error", "err", err)
+-          end
+-          if not err then
+-            handle_stdout(data)
+-          end
+-        end),
+-        stderr = vim.schedule_wrap(function(err, data)
+-          logger:debug("stderr", "data", data)
+-          if context:is_cancelled() then
+-            finish("cancelled", "")
+-            return
+-          end
+-          if err and err ~= "" then
+-            logger:debug("stderr#error", "err", err)
+-          end
+-          if not err and data then
+-            table.insert(stderr_chunks, data)
+-            observer.on_stderr(data)
+-          end
+-        end),
+-      },
++      opts,
+       vim.schedule_wrap(function(obj)
+         if #stdout_chunks > 0 then
+           --- authoritative re-scan: chunked pipes can cut a sessionID field
+diff --git a/lua/99/providers/opencode.lua b/lua/99/providers/opencode.lua
+index 27d01c5..434aaef 100644
+--- a/lua/99/providers/opencode.lua
++++ b/lua/99/providers/opencode.lua
+@@ -113,6 +113,37 @@ end
+ --- @class OpenCodeProvider : _99.Providers.BaseProvider
+ local OpenCodeProvider = setmetatable({}, { __index = BaseProvider })
+ 
++--- @param context _99.Prompt
++--- @return table<string, string>
++function OpenCodeProvider._build_env(_, context)
++  local tmp_file = vim.fn.fnamemodify(context.tmp_file, ":p")
++  local relative_tmp_file = context.tmp_file:gsub("^%./", "")
++  -- Permission patterns use wildcards and the last matching rule wins.
++  -- Docs: https://opencode.ai/docs/permissions/#granular-rules-object-syntax
++  local tmp_file_pattern = "*" .. tmp_file .. "*"
++  local relative_tmp_file_pattern = "*" .. relative_tmp_file .. "*"
++  local permissions = {
++    permission = {
++      edit = {
++        ["*"] = "deny",
++        [relative_tmp_file_pattern] = "allow",
++        [tmp_file_pattern] = "allow",
++      },
++      external_directory = {
++        [tmp_file_pattern] = "allow",
++      },
++      bash = "deny",
++      task = "deny",
++    },
++  }
++
++  -- OpenCode reads OPENCODE_CONFIG_CONTENT as an inline config overlay.
++  -- Docs: https://opencode.ai/docs/cli/#environment-variables
++  return {
++    OPENCODE_CONFIG_CONTENT = vim.json.encode(permissions),
++  }
++end
++
+ --- @param query string
+ --- @param context _99.Prompt
+ --- @return string[]

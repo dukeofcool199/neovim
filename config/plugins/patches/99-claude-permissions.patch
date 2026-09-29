@@ -1,8 +1,8 @@
-diff --git a/lua/99/providers.lua b/lua/99/providers.lua
-index e69de29..3333333 100644
---- a/lua/99/providers.lua
-+++ b/lua/99/providers.lua
-@@ -245,13 +245,54 @@
+diff --git a/lua/99/providers/claude-code.lua b/lua/99/providers/claude-code.lua
+index e44a919..1f50354 100644
+--- a/lua/99/providers/claude-code.lua
++++ b/lua/99/providers/claude-code.lua
+@@ -3,13 +3,54 @@ local BaseProvider = require("99.providers.base")
  --- @class ClaudeCodeProvider : _99.Providers.BaseProvider
  local ClaudeCodeProvider = setmetatable({}, { __index = BaseProvider })
  
