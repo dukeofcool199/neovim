@@ -34,6 +34,7 @@
     ./bookmarks.nix
     ./haskell-tools.nix
     ./scripture.nix
+    ./no-neck-pain.nix
     ./prompt-yank.nix
     ./better-escape.nix
     ./oversight.nix
