@@ -6,6 +6,7 @@
     ./lualine.nix
     ./bufferline.nix
     ./cmp.nix
+    ./dressing.nix
     ./oil.nix
     ./oil-git.nix
     ./hop.nix
@@ -16,7 +17,6 @@
     ./which-key.nix
     ./toggleterm.nix
     ./todo-comments.nix
-    ./twilight.nix
     ./neogen.nix
     ./conform.nix
     ./multicursors.nix
@@ -27,7 +27,6 @@
     ./octo.nix
     ./99.nix
     ./sidekick.nix
-    ./dressing.nix
     ./render-markdown.nix
     ./reticle.nix
     ./bookmarks.nix
@@ -36,6 +35,5 @@
     ./no-neck-pain.nix
     ./prompt-yank.nix
     ./better-escape.nix
-    ./oversight.nix
   ];
 }
