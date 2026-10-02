@@ -16,7 +16,6 @@
     ./which-key.nix
     ./toggleterm.nix
     ./todo-comments.nix
-    ./zen-mode.nix
     ./twilight.nix
     ./neogen.nix
     ./conform.nix

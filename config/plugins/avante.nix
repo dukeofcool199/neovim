@@ -75,7 +75,6 @@ in {
         stop = "<leader>ax";
         select_model = "<leader>aM";
         select_history = "<leader>ah";
-        zen_mode = "<leader>az";
         toggle = {
           default = "<leader>aa";
           repomap = "<leader>aR";

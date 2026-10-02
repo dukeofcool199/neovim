@@ -82,10 +82,6 @@
           group = "Workspace";
         }
         {
-          __unkeyed-1 = "<leader>z";
-          group = "Zen";
-        }
-        {
           __unkeyed-1 = "<leader><leader>";
           group = "Hop";
         }
