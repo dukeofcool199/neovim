@@ -28,6 +28,8 @@
     ./99.nix
     ./sidekick.nix
     ./render-markdown.nix
+    ./neorg.nix
+    ./image.nix
     ./reticle.nix
     ./bookmarks.nix
     ./haskell-tools.nix
