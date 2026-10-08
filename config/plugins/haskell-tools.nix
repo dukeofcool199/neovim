@@ -13,6 +13,17 @@
         };
       };
       hls = {
+        # otter mirrors haskell src blocks of org files into hidden *.otter.hs buffers that
+        # belong to no project; HLS there only pops "can't find ghc" errors.
+        auto_attach.__raw = ''
+          function()
+            if vim.api.nvim_buf_get_name(0):find("%.otter%.hs$") then
+              return false
+            end
+            return vim.fn.executable("haskell-language-server-wrapper") == 1
+              or vim.fn.executable("haskell-language-server") == 1
+          end
+        '';
         settings = {
           haskell = {
             formattingProvider = "ormolu";
