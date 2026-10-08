@@ -14,6 +14,7 @@
     ./gh-qf.nix
     ./jj-qf.nix
     ./gitsigns.nix
+    ./fugitive.nix
     ./which-key.nix
     ./toggleterm.nix
     ./todo-comments.nix
