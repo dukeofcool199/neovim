@@ -93,6 +93,45 @@ in {
       callback = function(ev)
         require("otter").activate()
         Snacks.image.doc.attach(ev.buf)
+
+        -- Auto-indent starts a new line under the heading or item text, so typed stars would
+        -- be a list bullet and a typed bullet a nested item. On the space after them, stars
+        -- move to column 0 and a bullet to the column of the item above. A callback, not
+        -- <expr>: Nvim evaluates <expr> while peeking ahead, before the bullet is inserted.
+        vim.keymap.set("i", "<Space>", function()
+          local row, col = vim.fn.line(".") - 1, vim.fn.col(".") - 1
+          local before = vim.api.nvim_get_current_line():sub(1, col)
+          local indent = before:match("^(%s+)%*+$")
+          local target = indent and 0
+          indent = indent or before:match("^(%s+)[-+]$") or before:match("^(%s+)%d+[.)]$")
+
+          vim.treesitter.get_parser(ev.buf, "org"):parse()
+          local node = vim.treesitter.get_node({ pos = { row, math.max(col - 1, 0) }, ignore_injections = true })
+          -- A YAML "- " or C " * " line inside #+begin_src stays where it is.
+          while node and node:type() ~= "block" do
+            node = node:parent()
+          end
+
+          if indent and not node then
+            local prev = vim.fn.prevnonblank(row) - 1
+            if not target and prev >= 0 then
+              -- get_node finds nothing at a bullet's own column; the line's last char works.
+              local item = vim.treesitter.get_node({
+                pos = { prev, math.max(#vim.fn.getline(prev + 1) - 1, 0) },
+                ignore_injections = true,
+              })
+              while item and item:type() ~= "listitem" do
+                item = item:parent()
+              end
+              target = item and select(2, item:start())
+            end
+            if target and target < #indent then
+              vim.api.nvim_buf_set_text(ev.buf, row, 0, row, #indent, { (" "):rep(target) })
+            end
+          end
+          -- <C-]> fires orgmode's abbreviations (:today: ...), which a mapped space skips.
+          vim.api.nvim_feedkeys(vim.keycode("<C-]> "), "in", false)
+        end, { buffer = ev.buf, desc = "Space; snap typed heading/bullet indent" })
       end,
     })
 
