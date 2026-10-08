@@ -50,6 +50,10 @@
           group = "Org";
         }
         {
+          __unkeyed-1 = "<leader>ob";
+          group = "Babel";
+        }
+        {
           __unkeyed-1 = "<leader>q";
           group = "Quickfix";
         }

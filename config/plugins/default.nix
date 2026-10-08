@@ -28,6 +28,7 @@
     ./sidekick.nix
     ./render-markdown.nix
     ./orgmode.nix
+    ./org-babel.nix
     ./image.nix
     ./reticle.nix
     ./bookmarks.nix
