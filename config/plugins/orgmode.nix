@@ -8,6 +8,8 @@ in {
       org_default_notes_file = "${notes}/refile.org";
       org_hide_leading_stars = true;
       org_hide_emphasis_markers = true;
+      # Replaced by the list-aware <CR> below, which falls back to this action.
+      mappings.org.org_return = false;
       org_capture_templates.j = {
         description = "Journal";
         template = "* %<%H:%M> %?";
@@ -88,11 +90,84 @@ in {
   extraPackages = [pkgs.imagemagick];
 
   extraConfigLua = ''
+    -- Numbers each ordered list 1, 2, 3..., or onward from an item's [@N] cookie, as Emacs does.
+    -- With a row, only the list holding the item that starts there.
+    local function renumber_lists(buf, row)
+      local root = vim.treesitter.get_parser(buf, "org"):parse()[1]:root()
+      for _, list in vim.treesitter.query.parse("org", "(list) @list"):iter_captures(root, buf) do
+        local items, wanted = {}, not row
+        for node in list:iter_children() do
+          if node:type() == "listitem" then
+            table.insert(items, node)
+            wanted = wanted or node:start() == row
+          end
+        end
+        if wanted then
+          local n = 1
+          for _, item in ipairs(items) do
+            local bullet = item:child(0)
+            local text = vim.treesitter.get_node_text(bullet, buf)
+            local closer = text:match("^%d+([.)])$")
+            if closer then
+              local r, from, _, to = bullet:range()
+              local after = vim.api.nvim_buf_get_lines(buf, r, r + 1, true)[1]:sub(to + 1)
+              n = tonumber(after:match("^%s+%[@(%d+)%]")) or n
+              if text ~= n .. closer then
+                vim.api.nvim_buf_set_text(buf, r, from, r, to, { n .. closer })
+              end
+              n = n + 1
+            end
+          end
+        end
+      end
+    end
+
     vim.api.nvim_create_autocmd("FileType", {
       pattern = "org",
       callback = function(ev)
         require("otter").activate()
         Snacks.image.doc.attach(ev.buf)
+
+        -- Enter at the end of a list item starts the next item (renumbering a numbered list),
+        -- and on an empty item ends the list. Anywhere else it is orgmode's own Enter.
+        vim.keymap.set("i", "<CR>", function()
+          local row, col = vim.fn.line(".") - 1, vim.fn.col(".") - 1
+          local line = vim.api.nvim_get_current_line()
+          local item
+          if line:sub(col + 1):match("^%s*$") then
+            local root = vim.treesitter.get_parser(ev.buf, "org"):parse()[1]:root()
+            local query = vim.treesitter.query.parse("org", "(listitem) @item")
+            -- Captures come outermost first, so the last match is the innermost item.
+            for _, node in query:iter_captures(root, ev.buf, row, row + 1) do
+              local _, _, last, last_col = node:range()
+              if (last_col == 0 and last - 1 or last) == row then
+                item = node
+              end
+            end
+          end
+          if not item then
+            return require("orgmode").action("org_mappings.org_return")
+          end
+
+          local first, indent = item:start()
+          local bullet = vim.treesitter.get_node_text(item:child(0), ev.buf)
+          local checkbox = item:child(1) and item:child(1):type() == "checkbox"
+          local rest = line:sub(indent + #bullet + 1):gsub("^%s*%[.%]", "")
+          if first == row and rest:match("^%s*$") then
+            vim.api.nvim_buf_set_lines(ev.buf, row, row + 1, true, { (" "):rep(indent) })
+            vim.api.nvim_win_set_cursor(0, { row + 1, indent })
+            return
+          end
+          local number = tonumber(bullet:match("^%d+"))
+          local new = (" "):rep(indent)
+            .. (number and (number + 1) .. bullet:sub(-1) or bullet)
+            .. (checkbox and " [ ] " or " ")
+          vim.api.nvim_buf_set_lines(ev.buf, row + 1, row + 1, true, { new })
+          if number then
+            renumber_lists(ev.buf, row + 1)
+          end
+          vim.api.nvim_win_set_cursor(0, { row + 2, #vim.api.nvim_buf_get_lines(ev.buf, row + 1, row + 2, true)[1] })
+        end, { buffer = ev.buf, desc = "org return; continue or end a list" })
 
         -- Auto-indent starts a new line under the heading or item text, so typed stars would
         -- be a list bullet and a typed bullet a nested item. On the space after them, stars
@@ -166,6 +241,8 @@ in {
         end
 
         vim.api.nvim_buf_call(buf, function()
+          -- First, so the indent pass realigns item text when "9." becomes "10.".
+          renumber_lists(buf)
           local blocks, block_at, item_end, tables = {}, {}, {}, {}
           for id, node in query:iter_captures(parser:parse()[1]:root(), buf) do
             local first, _, last, last_col = node:range()
