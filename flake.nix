@@ -37,7 +37,7 @@
         extraSpecialArgs = {inherit gitRev;};
       };
       notes = pkgs.writeShellScriptBin "notes" ''
-        exec ${nvim}/bin/nvim -c "Neorg index" -c "cd %:p:h"
+        cd ~/notes && exec ${nvim}/bin/nvim index.org
       '';
     in {
       default = pkgs.symlinkJoin {
