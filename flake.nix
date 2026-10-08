@@ -36,9 +36,17 @@
         module = import ./config;
         extraSpecialArgs = {inherit gitRev;};
       };
+      notes = pkgs.writeShellScriptBin "notes" ''
+        exec ${nvim}/bin/nvim -c "Neorg index" -c "cd %:p:h"
+      '';
     in {
-      default = nvim;
+      default = pkgs.symlinkJoin {
+        name = "nixvim";
+        paths = [nvim notes];
+        meta.mainProgram = "nvim";
+      };
       neovim = nvim;
+      inherit notes;
     });
   };
 }
