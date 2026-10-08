@@ -46,6 +46,10 @@
           group = "New";
         }
         {
+          __unkeyed-1 = "<leader>o";
+          group = "Org";
+        }
+        {
           __unkeyed-1 = "<leader>q";
           group = "Quickfix";
         }

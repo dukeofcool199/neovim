@@ -27,7 +27,7 @@
     ./99.nix
     ./sidekick.nix
     ./render-markdown.nix
-    ./neorg.nix
+    ./orgmode.nix
     ./image.nix
     ./reticle.nix
     ./bookmarks.nix
