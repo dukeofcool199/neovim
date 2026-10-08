@@ -24,7 +24,6 @@
     ./exrc.nix
     ./extra-plugins.nix
     ./jj.nix
-    ./octo.nix
     ./99.nix
     ./sidekick.nix
     ./render-markdown.nix

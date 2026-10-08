@@ -46,18 +46,6 @@
           group = "New";
         }
         {
-          __unkeyed-1 = "<leader>o";
-          group = "Octo (GitHub)";
-        }
-        {
-          __unkeyed-1 = "<leader>or";
-          group = "Review";
-        }
-        {
-          __unkeyed-1 = "<leader>os";
-          group = "Submit";
-        }
-        {
           __unkeyed-1 = "<leader>q";
           group = "Quickfix";
         }
