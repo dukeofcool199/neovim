@@ -396,12 +396,22 @@ in {
         return vim.fs.normalize(dir)
       end
 
-      ---Open [[attachment:NAME]] from the dir org-attach would use for the entry at the cursor.
+      -- How a default PDF viewer, matched on its .desktop id, opens a file at a page. Any other
+      -- viewer opens it at page 1.
+      local pdf_at_page = {
+        { "^brave", function(path, page) return { "brave", vim.uri_from_fname(path) .. "#page=" .. page } end },
+        { "okular", function(path, page) return { "okular", "-p", tostring(page), path } end },
+      }
+
+      ---Open [[attachment:NAME]] from the dir org-attach would use for the entry at the cursor;
+      ---NAME.pdf::N opens the PDF at page N, as in Emacs.
       function M.follow_attachment(link)
         if not vim.startswith(link, "attachment:") then
           return false
         end
-        local name = link:sub(#"attachment:" + 1):gsub("::.*$", "")
+        local rest = link:sub(#"attachment:" + 1)
+        local name, search = rest:match("^(.-)::(.*)$")
+        name = name or rest
         local dir = attach_dir()
         if not dir then
           vim.notify("org-attach: no :ID: or :DIR: on this entry", vim.log.levels.WARN)
@@ -412,14 +422,28 @@ in {
           vim.notify("org-attach: missing " .. path, vim.log.levels.WARN)
           return true
         end
+        local ext = (path:match("%.(%w+)$") or ""):lower()
+        local page = ext == "pdf" and tonumber(search)
+        if page then
+          local viewer = vim.trim(vim.system({ "xdg-mime", "query", "default", "application/pdf" }):wait().stdout or "")
+          for _, opener in ipairs(pdf_at_page) do
+            if viewer:match(opener[1]) then
+              vim.system(opener[2](path, page), { detach = true })
+              return true
+            end
+          end
+          vim.notify(("org-attach: can't open %s at a page, opening page 1"):format(viewer), vim.log.levels.WARN)
+          vim.ui.open(path)
+          return true
+        end
         local fd = io.open(path, "rb")
         local head = fd and fd:read(1024) or ""
         if fd then
           fd:close()
         end
         -- image.nvim renders images in a buffer; other binaries go to the desktop opener.
-        local ext = (path:match("%.(%w+)$") or ""):lower()
-        if vim.tbl_contains({ "png", "jpg", "jpeg", "gif", "webp", "avif" }, ext) or not head:find("\0", 1, true) then
+        if ext ~= "pdf"
+          and (vim.tbl_contains({ "png", "jpg", "jpeg", "gif", "webp", "avif" }, ext) or not head:find("\0", 1, true)) then
           vim.cmd.edit(vim.fn.fnameescape(path))
         else
           vim.ui.open(path)
