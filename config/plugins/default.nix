@@ -18,7 +18,6 @@
     ./which-key.nix
     ./toggleterm.nix
     ./todo-comments.nix
-    ./neogen.nix
     ./conform.nix
     ./multicursors.nix
     ./misc.nix
@@ -29,6 +28,7 @@
     ./sidekick.nix
     ./render-markdown.nix
     ./orgmode.nix
+    ./org-roam.nix
     ./org-babel.nix
     ./image.nix
     ./reticle.nix

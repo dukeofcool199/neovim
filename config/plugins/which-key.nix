@@ -43,7 +43,19 @@
         }
         {
           __unkeyed-1 = "<leader>n";
-          group = "New";
+          group = "Notes";
+        }
+        {
+          __unkeyed-1 = "<leader>na";
+          group = "Alias";
+        }
+        {
+          __unkeyed-1 = "<leader>nd";
+          group = "Dailies";
+        }
+        {
+          __unkeyed-1 = "<leader>no";
+          group = "Origin";
         }
         {
           __unkeyed-1 = "<leader>o";

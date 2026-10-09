@@ -8,14 +8,10 @@ in {
       org_default_notes_file = "${notes}/refile.org";
       org_hide_leading_stars = true;
       org_hide_emphasis_markers = true;
+      # Stored links use IDs, which org-roam indexes; file: links are invisible to it.
+      org_id_link_to_org_use_id = true;
       # Replaced by the list-aware <CR> below, which falls back to this action.
       mappings.org.org_return = false;
-      org_capture_templates.j = {
-        description = "Journal";
-        template = "* %<%H:%M> %?";
-        target = "${notes}/journal.org";
-        datetree = true;
-      };
     };
   };
 
@@ -27,7 +23,7 @@ in {
   keymaps = [
     {
       mode = "n";
-      key = "<leader>oh";
+      key = "<leader>nh";
       action.__raw = ''
         function()
           -- Found by tab variable, not cwd: project-nvim moves the global cwd on BufEnter.
@@ -47,17 +43,7 @@ in {
     }
     {
       mode = "n";
-      key = "<leader>of";
-      action.__raw = ''
-        function()
-          require("telescope.builtin").find_files({ cwd = vim.fn.expand("${notes}"), prompt_title = "Notes" })
-        end
-      '';
-      options.desc = "Find a note";
-    }
-    {
-      mode = "n";
-      key = "<leader>og";
+      key = "<leader>ng";
       action.__raw = ''
         function()
           require("telescope.builtin").live_grep({ cwd = vim.fn.expand("${notes}"), prompt_title = "Search notes" })
