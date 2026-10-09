@@ -43,9 +43,33 @@
     (let ((parent (string-to-number (getenv "NVIM_ORG_BABEL_PARENT"))))
       (run-with-timer 10 10 (lambda () (unless (process-attributes parent) (kill-emacs)))))
 
+    (require 'url)
+    (require 'mm-decode)
+
+    ;; org-attach's own url method names the file with the query string left on and asks
+    ;; whether the host is safe, which would hang a daemon; url-copy-file saves error pages.
+    (defun nvim-org-babel-download (url)
+      "Fetch URL into a fresh temp dir, named after the last part of its path; return the file."
+      (let* ((path (car (url-path-and-query (url-generic-parse-url url))))
+             (name (decode-coding-string (url-unhex-string (file-name-nondirectory (or path ""))) 'utf-8))
+             (buffer (or (url-retrieve-synchronously url t nil 300)
+                         (user-error "Could not fetch %s" url)))
+             (status (with-current-buffer buffer (bound-and-true-p url-http-response-status))))
+        (unwind-protect
+            (if (not (and status (<= 200 status 299)))
+                (user-error "HTTP %s fetching %s" status url)
+              (let ((file (expand-file-name (if (string-empty-p name) "download" name)
+                                            (make-temp-file "nvim-org-attach" t)))
+                    (handle (with-current-buffer buffer (mm-dissect-buffer t))))
+                (mm-save-part-to-file handle file)
+                (mm-destroy-parts handle)
+                file))
+          (kill-buffer buffer))))
+
     (defun nvim-org-babel (action in out err file line char &optional arg)
       "Run babel ACTION on the org text in IN as though it were FILE, with point at LINE/CHAR.
-    ARG is the file to copy in for the attach action.
+    ARG is the local file or http(s) URL to bring in for the attach actions; attach-source also
+    links a URL it was downloaded from.
     Write the resulting text to OUT and the error output buffer to ERR; return any echo-area error."
       (let ((coding-system-for-read 'utf-8-unix)
             (coding-system-for-write 'utf-8-unix)
@@ -68,16 +92,23 @@
                 ("subtree" (org-babel-execute-subtree))
                 ("remove" (org-babel-remove-result))
                 ("remove-all" (org-babel-remove-result-one-or-many t))
-                ("attach"
+                ((or "attach" "attach-source")
                  ;; org-attach only resolves a relative data/ dir in a file-visiting buffer,
                  ;; and can only tag an entry that has a heading.
                  (let* ((org-attach-id-dir (expand-file-name org-attach-id-dir))
                         (org-attach-auto-tag (unless (org-before-first-heading-p) org-attach-auto-tag))
-                        (link (format "[[attachment:%s]]" (file-name-nondirectory arg)))
+                        (url (string-match-p "\\`https?://" arg))
+                        (source (if url (nvim-org-babel-download arg) arg))
+                        (link (concat (org-link-make-string (concat "attachment:" (file-name-nondirectory source)))
+                                      (when (and url (equal action "attach-source"))
+                                        (concat " (" (org-link-make-string arg "source") ")"))))
                         (here (point-marker))
                         (meta (memq (org-element-type (org-element-at-point))
                                     '(headline keyword property-drawer node-property drawer planning))))
-                   (org-attach-attach arg nil 'cp)
+                   (unwind-protect
+                       (org-attach-attach source nil (if url 'mv 'cp))
+                     (when url
+                       (delete-directory (file-name-directory source) t)))
                    (goto-char here)
                    ;; In text the link goes after the cursor, like nvim's `a'; on a heading or
                    ;; its metadata, below that metadata; in the file header, at its end.
@@ -318,32 +349,31 @@ in {
         end
       end
 
-      ---Copy FILE (prompted for when nil) into the attachment dir of the entry at the cursor.
-      function M.attach(file)
+      ---Copy FILE or download an http(s) URL (prompted for when nil) into the attachment dir
+      ---of the entry at the cursor. With WITH_SOURCE, a downloaded file's URL is linked too.
+      function M.attach(file, with_source)
         local function attach(path)
           if not path or path == "" then
             return
           end
-          -- Emacs runs in the note's directory, not nvim's cwd.
-          path = vim.fn.fnamemodify(vim.fn.expand(path), ":p")
-          if vim.fn.filereadable(path) == 0 then
-            vim.notify("org-attach: not a readable file: " .. path, vim.log.levels.ERROR)
-            return
+          if not path:match("^https?://") then
+            -- Emacs runs in the note's directory, not nvim's cwd.
+            path = vim.fn.fnamemodify(vim.fn.expand(path), ":p")
+            if vim.fn.filereadable(path) == 0 then
+              vim.notify("org-attach: not a readable file: " .. path, vim.log.levels.ERROR)
+              return
+            end
           end
-          M.run("attach", path)
+          M.run(with_source and "attach-source" or "attach", path)
         end
         if file then
           return attach(file)
         end
-        vim.ui.input({ prompt = "Attach file: ", completion = "file" }, attach)
+        vim.ui.input({ prompt = "Attach file or URL: ", completion = "file" }, attach)
       end
 
-      ---Open [[attachment:NAME]] from the dir org-attach would use for the entry at the cursor.
-      function M.follow_attachment(link)
-        if not vim.startswith(link, "attachment:") then
-          return false
-        end
-        local name = link:sub(#"attachment:" + 1):gsub("::.*$", "")
+      ---The dir org-attach uses for the entry at the cursor, or nil without a :DIR: or :ID:.
+      local function attach_dir()
         local files = require("orgmode").files
         local headline = files:get_closest_headline_or_nil()
         local dir, id
@@ -358,10 +388,26 @@ in {
           dir = "data/" .. id:sub(1, 2) .. "/" .. id:sub(3)
         end
         if not dir then
+          return nil
+        end
+        if not dir:match("^[/~]") then
+          dir = vim.fs.joinpath(vim.fn.expand("%:p:h"), dir)
+        end
+        return vim.fs.normalize(dir)
+      end
+
+      ---Open [[attachment:NAME]] from the dir org-attach would use for the entry at the cursor.
+      function M.follow_attachment(link)
+        if not vim.startswith(link, "attachment:") then
+          return false
+        end
+        local name = link:sub(#"attachment:" + 1):gsub("::.*$", "")
+        local dir = attach_dir()
+        if not dir then
           vim.notify("org-attach: no :ID: or :DIR: on this entry", vim.log.levels.WARN)
           return true
         end
-        local path = vim.fs.normalize(vim.fs.joinpath(vim.fn.expand("%:p:h"), dir, name))
+        local path = vim.fs.joinpath(dir, name)
         if vim.fn.filereadable(path) == 0 then
           vim.notify("org-attach: missing " .. path, vim.log.levels.WARN)
           return true
@@ -379,6 +425,23 @@ in {
           vim.ui.open(path)
         end
         return true
+      end
+
+      ---attachment:NAME completions for the files attached to the entry at the cursor.
+      function M.complete_attachment(context)
+        local dir = attach_dir()
+        if not dir then
+          return {}
+        end
+        local items = {}
+        for name, type in vim.fs.dir(dir) do
+          local item = "attachment:" .. name
+          if type == "file" and context.matcher(item, context.base) then
+            table.insert(items, item)
+          end
+        end
+        table.sort(items)
+        return items
       end
 
       function M.restart()
@@ -414,22 +477,30 @@ in {
         map("<leader>obK", babel("remove-all"), "org babel remove all results")
         map("<leader>obn", function() require("org-babel").goto_block(1) end, "org babel next block")
         map("<leader>obp", function() require("org-babel").goto_block(-1) end, "org babel previous block")
-        map("<leader>oF", function() require("org-babel").attach() end, "org attach file")
+        map("<leader>of", function() require("org-babel").attach() end, "org attach file or URL")
+        map("<leader>oF", function() require("org-babel").attach(nil, true) end, "org attach, linking the source URL")
         vim.api.nvim_buf_create_user_command(ev.buf, "OrgAttach", function(opts)
-          require("org-babel").attach(opts.args ~= "" and opts.args or nil)
-        end, { nargs = "?", complete = "file", desc = "Attach a file to the entry at the cursor" })
+          require("org-babel").attach(opts.args ~= "" and opts.args or nil, opts.bang)
+        end, {
+          nargs = "?",
+          bang = true,
+          complete = "file",
+          desc = "Attach a file or http(s) URL to the entry at the cursor; ! links the URL too",
+        })
       end,
     })
   '';
 
   # Emacs' attachment: link type; orgmode reads hyperlink sources at setup, before
-  # extraConfigLua defines the module, so the source only looks it up when followed.
+  # extraConfigLua defines the module, so the source only looks it up when called.
   plugins.orgmode.settings.hyperlinks.sources = [
     {
       __raw = ''
         {
           get_name = function() return "attachment" end,
           follow = function(_, link) return require("org-babel").follow_attachment(link) end,
+          -- orgmode passes the completion context here, not the link string its docs describe.
+          autocomplete = function(_, context) return require("org-babel").complete_attachment(context) end,
         }
       '';
     }
