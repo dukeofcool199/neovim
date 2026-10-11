@@ -157,6 +157,16 @@
         desc = "Term exec prompt";
       };
     }
+    {
+      mode = "n";
+      key = "<leader>jj";
+      action = "<cmd>TermExec cmd=jjui<cr>";
+      options = {
+        silent = true;
+        noremap = true;
+        desc = "jjui";
+      };
+    }
 
     {
       mode = "n";

@@ -1,5 +1,4 @@
-{ ... }:
-{
+{...}: {
   plugins.toggleterm = {
     enable = true;
 
