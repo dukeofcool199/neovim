@@ -167,6 +167,16 @@
         desc = "jjui";
       };
     }
+    {
+      mode = "n";
+      key = "<leader>qq";
+      action = "<cmd>q!<cr>";
+      options = {
+        silent = true;
+        noremap = true;
+        desc = "Save";
+      };
+    }
 
     {
       mode = "n";

@@ -1,4 +1,4 @@
-{ pkgs, ... }: {
+{pkgs, ...}: {
   extraPlugins = with pkgs.vimPlugins; [
     quicker-nvim
     nvim-bqf
@@ -448,219 +448,327 @@
   keymaps = [
     {
       mode = "n";
-      key = "<leader>qq";
+      key = "<C-q>";
       action.__raw = ''function() require("quicker").toggle() end'';
-      options = { desc = "Toggle quickfix"; silent = true; };
+      options = {
+        desc = "Toggle quickfix";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>ql";
       action.__raw = ''function() require("quicker").toggle({ loclist = true }) end'';
-      options = { desc = "Toggle location list"; silent = true; };
+      options = {
+        desc = "Toggle location list";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qo";
       action.__raw = ''function() require("quicker").open() end'';
-      options = { desc = "Open quickfix"; silent = true; };
+      options = {
+        desc = "Open quickfix";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qO";
       action.__raw = ''function() require("quicker").open({ loclist = true }) end'';
-      options = { desc = "Open location list"; silent = true; };
+      options = {
+        desc = "Open location list";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qc";
       action.__raw = ''function() require("quicker").close() end'';
-      options = { desc = "Close quickfix"; silent = true; };
+      options = {
+        desc = "Close quickfix";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qC";
       action.__raw = ''function() require("quicker").close({ loclist = true }) end'';
-      options = { desc = "Close location list"; silent = true; };
+      options = {
+        desc = "Close location list";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qn";
       action = "<cmd>Cnext<cr>";
-      options = { desc = "Next quickfix item (wrap)"; silent = true; };
+      options = {
+        desc = "Next quickfix item (wrap)";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qp";
       action = "<cmd>Cprev<cr>";
-      options = { desc = "Previous quickfix item (wrap)"; silent = true; };
+      options = {
+        desc = "Previous quickfix item (wrap)";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qN";
       action = "<cmd>Lnext<cr>";
-      options = { desc = "Next location item (wrap)"; silent = true; };
+      options = {
+        desc = "Next location item (wrap)";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qP";
       action = "<cmd>Lprev<cr>";
-      options = { desc = "Previous location item (wrap)"; silent = true; };
+      options = {
+        desc = "Previous location item (wrap)";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "]q";
       action = "<cmd>Cnext<cr>";
-      options = { desc = "Next quickfix item (wrap)"; silent = true; };
+      options = {
+        desc = "Next quickfix item (wrap)";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "[q";
       action = "<cmd>Cprev<cr>";
-      options = { desc = "Previous quickfix item (wrap)"; silent = true; };
+      options = {
+        desc = "Previous quickfix item (wrap)";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "]l";
       action = "<cmd>Lnext<cr>";
-      options = { desc = "Next location item (wrap)"; silent = true; };
+      options = {
+        desc = "Next location item (wrap)";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "[l";
       action = "<cmd>Lprev<cr>";
-      options = { desc = "Previous location item (wrap)"; silent = true; };
+      options = {
+        desc = "Previous location item (wrap)";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qf";
       action.__raw = ''function() vim.diagnostic.setqflist() end'';
-      options = { desc = "Diagnostics to quickfix"; silent = true; };
+      options = {
+        desc = "Diagnostics to quickfix";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qF";
       action.__raw = ''function() vim.diagnostic.setloclist() end'';
-      options = { desc = "Diagnostics to location list"; silent = true; };
+      options = {
+        desc = "Diagnostics to location list";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qg";
       action.__raw = ''function() local p = vim.fn.input("Grep to quickfix: ") if p ~= "" then vim.cmd("Cgrep " .. p) end end'';
-      options = { desc = "Grep to quickfix"; silent = true; };
+      options = {
+        desc = "Grep to quickfix";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>q/";
       action = "<cmd>Csearch<cr>";
-      options = { desc = "Search pattern to quickfix (buffer)"; silent = true; };
+      options = {
+        desc = "Search pattern to quickfix (buffer)";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>q?";
       action = "<cmd>Csearchall<cr>";
-      options = { desc = "Search pattern to quickfix (all buffers)"; silent = true; };
+      options = {
+        desc = "Search pattern to quickfix (all buffers)";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>q*";
       action = "<cmd>Cword<cr>";
-      options = { desc = "Word under cursor to quickfix (project)"; silent = true; };
+      options = {
+        desc = "Word under cursor to quickfix (project)";
+        silent = true;
+      };
     }
     {
       mode = "x";
       key = "<leader>q*";
       action = ":<C-u>Cselection<cr>";
-      options = { desc = "Selection to quickfix (project)"; silent = true; };
+      options = {
+        desc = "Selection to quickfix (project)";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qt";
       action = "<cmd>Telescope quickfix<cr>";
-      options = { desc = "Telescope quickfix"; silent = true; };
+      options = {
+        desc = "Telescope quickfix";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qT";
       action = "<cmd>Telescope loclist<cr>";
-      options = { desc = "Telescope loclist"; silent = true; };
+      options = {
+        desc = "Telescope loclist";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qs";
       action.__raw = ''function() local n = vim.fn.input("Save quickfix list: ") if n ~= "" then vim.cmd({ cmd = "Csave", args = { n } }) end end'';
-      options = { desc = "Save quickfix list"; silent = true; };
+      options = {
+        desc = "Save quickfix list";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qr";
       action.__raw = ''function() local n = vim.fn.input("Restore quickfix list: ") if n ~= "" then vim.cmd({ cmd = "Cload", args = { n } }) end end'';
-      options = { desc = "Restore quickfix list"; silent = true; };
+      options = {
+        desc = "Restore quickfix list";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qS";
       action.__raw = ''function() local n = vim.fn.input("Save location list: ") if n ~= "" then vim.cmd({ cmd = "Lsave", args = { n } }) end end'';
-      options = { desc = "Save location list"; silent = true; };
+      options = {
+        desc = "Save location list";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qR";
       action.__raw = ''function() local n = vim.fn.input("Restore location list: ") if n ~= "" then vim.cmd({ cmd = "Lload", args = { n } }) end end'';
-      options = { desc = "Restore location list"; silent = true; };
+      options = {
+        desc = "Restore location list";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qy";
       action = "<cmd>chistory<cr>";
-      options = { desc = "Quickfix history"; silent = true; };
+      options = {
+        desc = "Quickfix history";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qd";
       action = "<cmd>Cdelete<cr>";
-      options = { desc = "Clear quickfix"; silent = true; };
+      options = {
+        desc = "Clear quickfix";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qD";
       action = "<cmd>Ldelete<cr>";
-      options = { desc = "Clear location list"; silent = true; };
+      options = {
+        desc = "Clear location list";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qx";
       action.__raw = ''function() local c = vim.fn.input("Cdo: ") if c ~= "" then vim.cmd("Cdo " .. c) end end'';
-      options = { desc = "Run command on each item"; silent = true; };
+      options = {
+        desc = "Run command on each item";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "<leader>qX";
       action.__raw = ''function() local c = vim.fn.input("Cfdo: ") if c ~= "" then vim.cmd("Cfdo " .. c) end end'';
-      options = { desc = "Run command on each file"; silent = true; };
+      options = {
+        desc = "Run command on each file";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "]Q";
       action = "<cmd>clast<cr>";
-      options = { desc = "Last quickfix item"; silent = true; };
+      options = {
+        desc = "Last quickfix item";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "[Q";
       action = "<cmd>crewind<cr>";
-      options = { desc = "First quickfix item"; silent = true; };
+      options = {
+        desc = "First quickfix item";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "]L";
       action = "<cmd>llast<cr>";
-      options = { desc = "Last location item"; silent = true; };
+      options = {
+        desc = "Last location item";
+        silent = true;
+      };
     }
     {
       mode = "n";
       key = "[L";
       action = "<cmd>lrewind<cr>";
-      options = { desc = "First location item"; silent = true; };
+      options = {
+        desc = "First location item";
+        silent = true;
+      };
     }
   ];
 }
