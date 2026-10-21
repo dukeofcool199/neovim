@@ -6,6 +6,7 @@
     ./lualine.nix
     ./bufferline.nix
     ./cmp.nix
+    ./lsp-signature.nix
     ./dressing.nix
     ./oil.nix
     ./oil-git.nix

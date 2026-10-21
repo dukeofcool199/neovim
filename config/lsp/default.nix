@@ -26,6 +26,8 @@
       # Go
       gopls = {
         enable = true;
+        # Function completions insert one placeholder per argument for <Tab>.
+        settings.gopls.usePlaceholders = true;
       };
 
       # Rust
