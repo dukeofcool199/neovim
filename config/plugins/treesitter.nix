@@ -1,4 +1,20 @@
-{...}: {
+{
+  config,
+  pkgs,
+  ...
+}: let
+  hujson = pkgs.tree-sitter.buildGrammar {
+    language = "hujson";
+    version = "unstable";
+
+    src = pkgs.fetchFromGitHub {
+      owner = "ggfevans";
+      repo = "tree-sitter-hujson";
+      rev = "v1.2.0";
+      hash = "sha256-E3CDEObObYx74ckSZfTIwRr5PIEObZ0PMrTKfOztz5Q=";
+    };
+  };
+in {
   plugins.treesitter = {
     enable = true;
 
@@ -8,9 +24,17 @@
     };
     settings = {
       highlight.enable = true;
-      ensureInstalled = ["java" "kotlin"];
     };
+    grammarPackages = config.plugins.treesitter.package.allGrammars ++ [hujson];
+    languageRegister.hujson = "hujson";
   };
+
+  filetype.extension = {
+    hujson = "hujson";
+    jwcc = "hujson";
+  };
+
+  extraFiles."queries/hujson/highlights.scm".source = "${hujson.src}/queries/highlights.scm";
 
   # Folding configuration (from tree-sitter.lua)
   opts = {
