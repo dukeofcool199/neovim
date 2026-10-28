@@ -55,6 +55,9 @@
       ocamllsp = {
         enable = true;
       };
+      nushell = {
+        enable = true;
+      };
 
       # Gleam
       gleam = {
