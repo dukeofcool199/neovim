@@ -18,7 +18,7 @@ in {
 
   keymaps = let
     cli = call: {__raw = "function() require('sidekick.cli').${call} end";};
-    map = mode: key: call: desc: {
+    keymapper = mode: key: call: desc: {
       inherit mode key;
       action = cli call;
       options = {
@@ -39,18 +39,18 @@ in {
         noremap = true;
       };
     }
-    (map nv "<leader>aa" "toggle()" "Toggle CLI")
-    (map "n" "<leader>ac" "toggle({ name = 'claude', focus = true })" "Toggle Claude Code")
-    (map "n" "<leader>ai" "toggle({ name = 'aider', focus = true })" "Toggle Aider")
-    (map "n" "<leader>ao" "toggle({ name = 'opencode', focus = true })" "Toggle opencode")
-    (map "n" "<leader>aP" "toggle({ name = 'pi', focus = true })" "Toggle pi")
-    (map "n" "<leader>as" "select()" "Select CLI tool")
-    (map "n" "<leader>ad" "close()" "Detach CLI session")
-    (map nv "<leader>ap" "prompt()" "Select prompt")
-    (map nv "<leader>at" "send({ msg = '{this}' })" "Send this")
-    (map "v" "<leader>av" "send({ msg = '{selection}' })" "Send selection")
-    (map "n" "<leader>af" "send({ msg = '{file}' })" "Send file")
-    (map "n" "<leader>aq" "send({ msg = '{quickfix}' })" "Send quickfix list")
-    (map "n" "<leader>ag" "send({ msg = '{diagnostics}' })" "Send diagnostics")
+    (keymapper nv "<leader>aa" "toggle()" "Toggle CLI")
+    (keymapper "n" "<leader>ac" "toggle({ name = 'claude', focus = true })" "Toggle Claude Code")
+    (keymapper "n" "<leader>ai" "toggle({ name = 'aider', focus = true })" "Toggle Aider")
+    (keymapper "n" "<leader>ao" "toggle({ name = 'opencode', focus = true })" "Toggle opencode")
+    (keymapper "n" "<leader>aP" "toggle({ name = 'pi', focus = true })" "Toggle pi")
+    (keymapper "n" "<leader>as" "select()" "Select CLI tool")
+    (keymapper "n" "<leader>ad" "close()" "Detach CLI session")
+    (keymapper nv "<leader>ap" "prompt()" "Select prompt")
+    (keymapper nv "<leader>at" "send({ msg = '{this}' })" "Send this")
+    (keymapper "v" "<leader>av" "send({ msg = '{selection}' })" "Send selection")
+    (keymapper "n" "<leader>af" "send({ msg = '{file}' })" "Send file")
+    (keymapper "n" "<leader>aq" "send({ msg = '{quickfix}' })" "Send quickfix list")
+    (keymapper "n" "<leader>ag" "send({ msg = '{diagnostics}' })" "Send diagnostics")
   ];
 }
