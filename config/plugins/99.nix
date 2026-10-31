@@ -3,10 +3,6 @@
 # so :AiModel, :AiPick, :AiStatus and a project's .nvim.lua reach them the same
 # way they reach every other role.
 {pkgs, ...}: let
-  registry = import ../ai/registry.nix;
-  editRole = registry.roles.edit;
-  editProvider = registry.agents.${editRole.backend}.provider;
-
   plugin-99 = pkgs.vimUtils.buildVimPlugin {
     name = "99";
     src = pkgs.fetchFromGitHub {
@@ -16,9 +12,6 @@
       sha256 = "sha256-UcEHjs9XCsoicSKanMqPRcFRI2xPaoAML+lWGK1D67o=";
     };
     patches = [
-      ./patches/99-opencode-fence.patch
-      ./patches/99-skills.patch
-      ./patches/99-claude-permissions.patch
     ];
     doCheck = false;
   };
@@ -35,8 +28,6 @@ in {
     -- A seed only: every op resolves its role again through ninetynine_run,
     -- so this is what 99 holds before the first keypress.
     _99.setup({
-      provider = _99.Providers.${editProvider},
-      model = "${editRole.model}",
       logger = {
         level = _99.DEBUG,
         path = "/tmp/" .. basename .. ".99.debug",
@@ -66,34 +57,6 @@ in {
         "AGENT.md",
       },
     })
-
-    -- Run a 99 op under its role's agent and model. The model is snapshotted
-    -- into the request at creation, so it is race-free with the async prompt
-    -- that follows; the provider and its binary are 99's own late binding,
-    -- read when the request fires. Two prompts open on different claude
-    -- agents at once therefore race on the binary, and lose loudly -- an
-    -- Anthropic model id against OpenCode Go is a model error, not a bad edit.
-    _G.ninetynine_run = function(role, fn)
-      local r = require("ai").role(role)
-      if not r then
-        return vim.notify("99: no '" .. role .. "' role", vim.log.levels.WARN)
-      end
-      local provider = r.provider and _99.Providers[r.provider]
-      if not provider then
-        return vim.notify(
-          ("99: %s is on '%s', which is not a CLI agent 99 can drive"):format(role, tostring(r.backend)),
-          vim.log.levels.WARN
-        )
-      end
-      -- Which claude: claude-go names its wrapper, claude-code sets nothing
-      -- and the patched provider falls back to the plain binary.
-      provider._command = r.command
-      -- set_provider resets the model to that provider's own default, so the
-      -- order here is forced.
-      _99.set_provider(provider)
-      _99.set_model(r.model)
-      require("99")[fn]()
-    end
   '';
 
   keymaps = [
@@ -163,34 +126,6 @@ in {
       '';
       options = {
         desc = "99: view logs";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>9m";
-      action.__raw = ''
-        function()
-          require("ai").pick("edit")
-        end
-      '';
-      options = {
-        desc = "99: set edit agent and model";
-        silent = true;
-        noremap = true;
-      };
-    }
-    {
-      mode = "n";
-      key = "<leader>9M";
-      action.__raw = ''
-        function()
-          require("ai").pick("search")
-        end
-      '';
-      options = {
-        desc = "99: set search agent and model";
         silent = true;
         noremap = true;
       };

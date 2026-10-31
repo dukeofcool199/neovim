@@ -3,10 +3,6 @@
 # whichever is running. The claude tool follows the `cli` role in
 # config/ai/registry.nix.
 {pkgs, ...}: let
-  registry = import ../ai/registry.nix;
-  claudeModel = registry.roles.cli.model;
-  cliCommand = registry.roles.cli.command;
-
   sidekick-nvim = pkgs.vimUtils.buildVimPlugin {
     name = "sidekick.nvim";
     src = pkgs.fetchFromGitHub {
@@ -19,96 +15,6 @@
   };
 in {
   extraPlugins = [sidekick-nvim];
-
-  extraConfigLua = ''
-    -- Seed the environment before any terminal spawns: sidekick snapshots
-    -- vim.uv.os_environ() at jobstart, and its env table must hold plain
-    -- strings (a function raises E729, and the zellij backend ignores tool
-    -- env entirely), so eager export is the only shape that works here.
-    pcall(function()
-      require("ai.auth").export("opencode-go")
-    end)
-
-    -- One key in, same key out. Acts on the most recently focused terminal
-    -- rather than asking sidekick to resolve a session, so several running
-    -- agents never raise a picker on the fast path; with none running it
-    -- starts the `cli` role's tool.
-    function _G.sidekick_overlay()
-      local terminals = require("sidekick.cli.terminal").sessions()
-      table.sort(terminals, function(a, b)
-        return a.atime > b.atime
-      end)
-      local term = terminals[1]
-      if not term then
-        return require("sidekick.cli").toggle({ name = "${cliCommand}", focus = true })
-      end
-      if term:is_focused() then
-        term:hide()
-      else
-        term:focus()
-      end
-    end
-
-    local sidekick_ok, sidekick = pcall(require, "sidekick")
-    if sidekick_ok then
-      sidekick.setup({
-        nes = {
-          enabled = false,
-        },
-        cli = {
-          picker = "telescope",
-          win = {
-            -- An overlay, not a split: the window underneath keeps its
-            -- layout, so a full-screen review stays readable the moment the
-            -- terminal is hidden. In a float sidekick's nav_* keys go inert
-            -- and <c-h/j/k/l> reach the CLI instead.
-            layout = "float",
-            float = {
-              width = ${toString registry.ui.overlay.width},
-              height = ${toString registry.ui.overlay.height},
-            },
-            keys = {
-              -- Buffer-local, so <c-g> is only stolen from the agent
-              -- terminals and every other terminal keeps it.
-              overlay = { "<c-g>", "hide", mode = "nt", desc = "hide the overlay" },
-            },
-          },
-          tools = {
-            claude = {
-              cmd = { "claude", "--model", "${claudeModel}" },
-            },
-            aider = {
-              -- aider only offers `/add` for words that match a repo path verbatim,
-              -- so drop the `@` prefix and `:` separator the default location format adds
-              format = function(text)
-                local Text = require("sidekick.text")
-                Text.transform(text, function(chunk)
-                  return (chunk == "@" or chunk == ":") and "" or chunk
-                end, "SidekickLocDelim")
-                return Text.to_string(text)
-              end,
-            },
-          },
-        },
-      })
-
-      -- Registry -> sidekick. Late-bound per spawn, so this reaches the
-      -- next terminal; a running CLI keeps the argv and env it started
-      -- with. require("sidekick.config").setup() must not be re-called:
-      -- it rebuilds from defaults and would discard this.
-      require("ai").on_change(function(name, r)
-        if name ~= "cli" or not r then
-          return
-        end
-        local cfg = require("sidekick.config")
-        local bin = r.command or "claude"
-        local tool = cfg.cli and cfg.cli.tools and cfg.cli.tools[bin]
-        if tool and r.model then
-          tool.cmd = {bin, "--model", r.model}
-        end
-      end)
-    end
-  '';
 
   keymaps = let
     cli = call: {__raw = "function() require('sidekick.cli').${call} end";};
