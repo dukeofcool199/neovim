@@ -4,7 +4,6 @@
     ./treesitter.nix
     ./telescope.nix
     ./lualine.nix
-    ./bufferline.nix
     ./cmp.nix
     ./lsp-signature.nix
     ./dressing.nix
@@ -12,7 +11,6 @@
     ./oil-git.nix
     ./hop.nix
     ./quickfix.nix
-    ./gh-qf.nix
     ./jj-qf.nix
     ./gitsigns.nix
     ./fugitive.nix
