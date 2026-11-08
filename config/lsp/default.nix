@@ -59,6 +59,10 @@
         enable = true;
       };
 
+      ols = {
+        enable = true;
+      };
+
       # Gleam
       gleam = {
         enable = true;
