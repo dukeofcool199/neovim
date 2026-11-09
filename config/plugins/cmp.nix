@@ -3,9 +3,6 @@
     enable = true;
 
     settings = {
-      # Manual until <leader>ta; <C-Space> opens the menu either way.
-      completion.autocomplete = false;
-
       # Minuet round-trips an LLM; cmp's 500ms default drops the results.
       performance.fetching_timeout = 2000;
 
