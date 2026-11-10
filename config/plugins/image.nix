@@ -9,6 +9,7 @@
         syslang.enabled = true;
         html.enabled = true;
         css.enabled = true;
+        neorg.enabled = false;
       };
     };
   };
