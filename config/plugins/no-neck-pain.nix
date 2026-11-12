@@ -7,13 +7,6 @@
         enableOnVimEnter = true;
         skipEnteringNoNeckPainBuffer = false;
       };
-      buffers = {
-        scratchPad = {
-          enabled = true;
-          fileName = "notes";
-          location = "~/notes";
-        };
-      };
     };
   };
 }
